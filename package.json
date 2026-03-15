@@ -8,7 +8,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.32",
+    "@langchain/langgraph": "^1.2.2",
+    "microsoft-cognitiveservices-speech-sdk": "^1.48.0",
     "next": "16.1.6",
+    "openai": "^6.29.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
