@@ -100,17 +100,6 @@ function deriveInsightPills(step: WorkbenchStep): Pill[] {
 
   const pills: Pill[] = [];
 
-  if (agentType === "sentiment") {
-    const emotion = output.emotion as string | undefined;
-    const intensity = output.intensity as string | undefined;
-    if (emotion) pills.push({ label: `😤 ${emotion}`, colorClass: "bg-violet-500/20 text-violet-300" });
-    if (intensity) {
-      const ic = intensity === "high" ? "bg-red-500/20 text-red-300" : intensity === "medium" ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300";
-      pills.push({ label: `⚡ ${intensity} intensity`, colorClass: ic });
-    }
-    return pills;
-  }
-
   if (agentType === "orchestrator") {
     const priority = output.priority as string | undefined;
     const categories = output.categories as string[] | undefined;
