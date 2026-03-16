@@ -3,10 +3,14 @@ import { PrismaLibSql } from "@prisma/adapter-libsql";
 import path from "path";
 
 function createPrismaClient(): PrismaClient {
-  // Build an absolute file:/// URL for the SQLite database (forward slashes required)
-  const dbPath = path.resolve(process.cwd(), "prisma", "dev.db");
-  const url = "file:///" + dbPath.split(path.sep).join("/");
-  const adapter = new PrismaLibSql({ url });
+  // Prefer explicit env vars (Turso in production, file URL in dev)
+  const url =
+    process.env.TURSO_DATABASE_URL ??
+    "file:///" + path.resolve(process.cwd(), "prisma", "dev.db").split(path.sep).join("/");
+
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  const adapter = new PrismaLibSql({ url, ...(authToken ? { authToken } : {}) });
   return new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 }
 
