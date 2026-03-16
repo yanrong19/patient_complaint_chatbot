@@ -28,7 +28,6 @@ const defaultMetrics: PerformanceMetrics = {
 const SENTENCE_END = /[.!?][)\"]?\s+|[.!?][)\"]?$|\n/;
 
 const AGENT_TYPE_MAP: Record<string, AgentNodeType> = {
-  sentiment_analyzer: "sentiment",
   orchestrator: "orchestrator",
   clinical_agent: "clinical",
   billing_agent: "billing",
@@ -395,21 +394,23 @@ export default function ChatApp() {
               setIsThinking(false);
 
               // ── Tier 2/3 metric capture from agent results ──────────────
-              if (event.agent === "sentiment_analyzer") {
-                const snap = {
-                  turn: turnId,
-                  emotion: String(event.output.emotion ?? "neutral"),
-                  intensity: String(event.output.intensity ?? "low"),
-                };
-                setMetrics((prev) => ({
-                  ...prev,
-                  sentimentHistory: [...prev.sentimentHistory, snap],
-                }));
-              }
               if (event.agent === "orchestrator") {
                 const o = event.output;
                 if (o.requiresImmediateEscalation) {
                   setMetrics((prev) => ({ ...prev, escalationCount: prev.escalationCount + 1 }));
+                }
+                // Sentiment is now analysed as a tool inside the orchestrator
+                const sentiment = o.sentiment as { emotion?: string; intensity?: string } | undefined;
+                if (sentiment) {
+                  const snap = {
+                    turn: turnId,
+                    emotion: String(sentiment.emotion ?? "neutral"),
+                    intensity: String(sentiment.intensity ?? "low"),
+                  };
+                  setMetrics((prev) => ({
+                    ...prev,
+                    sentimentHistory: [...prev.sentimentHistory, snap],
+                  }));
                 }
               }
             } else if (event.type === "token") {
@@ -666,6 +667,7 @@ export default function ChatApp() {
 
 function formatToolTitle(tool: string): string {
   const titles: Record<string, string> = {
+    generate_complaint_log: "Generating complaint log",
     log_complaint: "Logging complaint",
     check_complaint_status: "Checking complaint status",
     escalate_to_human: "Escalating to human staff",
@@ -697,8 +699,6 @@ function formatAgentResultDescription(
   output: Record<string, unknown>
 ): string {
   switch (agent) {
-    case "sentiment_analyzer":
-      return `${output.emotion ?? "unknown"} (${output.intensity ?? ""}) — ${output.summary ?? ""}`;
     case "orchestrator": {
       const cats = (output.categories as string[] | undefined)?.join(", ") ?? "";
       const pri = output.priority ?? "";

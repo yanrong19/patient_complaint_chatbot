@@ -15,7 +15,6 @@ const AGENT_META: Record<
   AgentNodeType,
   { label: string; icon: string; colorHex: string; bgClass: string; borderClass: string; textClass: string; description: string }
 > = {
-  sentiment:    { label: "Sentiment Analyzer",     icon: "🧠", colorHex: "#8b5cf6", bgClass: "bg-violet-500/10",  borderClass: "border-violet-500/40", textClass: "text-violet-300",  description: "Detects patient emotional state, tone, and intensity"               },
   orchestrator: { label: "Orchestrator",            icon: "🎯", colorHex: "#f59e0b", bgClass: "bg-amber-500/10",   borderClass: "border-amber-500/50",  textClass: "text-amber-300",   description: "Categorises issues, assigns priority, routes to specialist agents"   },
   clinical:     { label: "Clinical Quality",        icon: "🏥", colorHex: "#06b6d4", bgClass: "bg-cyan-500/10",    borderClass: "border-cyan-500/30",   textClass: "text-cyan-300",    description: "Reviews medical treatment, care quality, and clinical concerns"      },
   billing:      { label: "Billing & Financial",     icon: "💳", colorHex: "#3b82f6", bgClass: "bg-blue-500/10",    borderClass: "border-blue-500/30",   textClass: "text-blue-300",    description: "Analyses billing discrepancies, charges, and insurance issues"       },
@@ -56,11 +55,6 @@ function getInsight(agentType: AgentNodeType, step: WorkbenchStep): string | nul
   if (step.status !== "done" || !step.output) return null;
   const o = step.output;
   switch (agentType) {
-    case "sentiment": {
-      const e = o.emotion as string | undefined;
-      const i = o.intensity as string | undefined;
-      return e && i ? `${e} / ${i}` : (e ?? null);
-    }
     case "orchestrator": {
       const pri = o.priority as string | undefined;
       const cats = o.categories as string[] | undefined;
@@ -73,8 +67,12 @@ function getInsight(agentType: AgentNodeType, step: WorkbenchStep): string | nul
       return (o.legalRiskLevel as string | undefined) === "none" ? "Clear" : ((o.legalRiskLevel as string | undefined) ?? null);
     case "summary":
       return "SBAR ready";
-    case "closer":
+    case "closer": {
+      const emotion = o.emotion as string | undefined;
+      const priority = o.priority as string | undefined;
+      if (emotion && priority) return `${priority} · ${emotion}`;
       return "Response ready";
+    }
     default:
       return (o.urgency as string | undefined) ?? null;
   }
@@ -94,13 +92,6 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
   };
 
   switch (agentType) {
-    case "sentiment":
-      return [
-        row("Emotion", output.emotion, "text-violet-300 font-medium"),
-        row("Intensity", output.intensity, "text-violet-300"),
-        row("Tone", output.tone),
-        row("Summary", output.summary),
-      ].filter(Boolean);
     case "orchestrator":
       return [
         row("Priority", (output.priority as string | undefined)?.toUpperCase(), output.priority === "high" ? "text-red-300 font-semibold" : output.priority === "medium" ? "text-amber-300 font-medium" : "text-green-300"),
@@ -124,8 +115,27 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
         row("Assessment", output.assessment),
         row("Recommendation", output.recommendation),
       ].filter(Boolean);
-    case "closer":
-      return [row("Status", output.status ?? "Response context prepared", "text-purple-300")].filter(Boolean);
+    case "closer": {
+      const emotion = output.emotion as string | undefined;
+      const intensity = output.emotionIntensity as string | undefined;
+      const summary = output.emotionSummary as string | undefined;
+      const priority = output.priority as string | undefined;
+      const issues = output.coreIssues as string[] | undefined;
+      const specialists = output.specialistAgents as string[] | undefined;
+      const escalation = output.requiresEscalation as boolean | undefined;
+      const isComplaint = output.isComplaint as boolean | undefined;
+      const complaintId = output.complaintId as string | null | undefined;
+      return [
+        row("Patient Emotion", emotion && intensity ? `${emotion} (${intensity})` : emotion, "text-purple-300 font-medium"),
+        row("Emotional Summary", summary),
+        row("Priority", priority, priority === "HIGH" ? "text-red-300 font-semibold" : priority === "MEDIUM" ? "text-amber-300" : "text-green-300"),
+        row("Type", isComplaint ? "Complaint" : "General enquiry", isComplaint ? "text-amber-300" : "text-slate-300"),
+        row("Core Issues", issues?.join("; ")),
+        row("Specialist Input", specialists?.join(", ")),
+        row("Complaint ID", complaintId, "text-amber-300 font-mono"),
+        row("Immediate Escalation", escalation ? "YES ⚠️" : undefined, "text-red-300 font-bold"),
+      ].filter(Boolean);
+    }
     default:
       return [
         row("Urgency", output.urgency, output.urgency === "critical" ? "text-red-300 font-semibold" : output.urgency === "urgent" ? "text-amber-300" : "text-green-300"),
@@ -438,9 +448,11 @@ export default function WorkbenchGraph({
 
   const activeSpecialists = SPECIALIST_ORDER.filter((t) => stepMap.has(t));
   const orchestratorRunning = stepMap.get("orchestrator")?.status === "running";
-  const showParallelZone =
-    orchestratorRunning || activeSpecialists.length > 0;
+  // Show the parallel zone while orchestrator is routing, or once specialists have fired
+  const showSpecialists = orchestratorRunning || activeSpecialists.length > 0;
   const pendingRouting = orchestratorRunning && activeSpecialists.length === 0;
+  const showSummary = stepMap.has("summary");
+  const showCloser = stepMap.has("closer");
 
   const hasError = steps.some((s) => s.status === "error");
   const isDone = stepMap.get("closer")?.status === "done";
@@ -480,19 +492,10 @@ export default function WorkbenchGraph({
         )}
       </div>
 
-      {/* Flow graph */}
+      {/* Flow graph — only renders executed nodes */}
       <div className="overflow-x-auto">
         <div className="flex items-center min-w-max gap-0">
-          {/* Sentiment */}
-          <AgentNodeCard
-            agentType="sentiment"
-            step={stepMap.get("sentiment")}
-            selected={selectedAgent === "sentiment"}
-            onClick={() => handleSelectAgent("sentiment")}
-          />
-          <Arrow />
-
-          {/* Orchestrator */}
+          {/* Orchestrator — always shown */}
           <AgentNodeCard
             agentType="orchestrator"
             step={stepMap.get("orchestrator")}
@@ -500,7 +503,8 @@ export default function WorkbenchGraph({
             onClick={() => handleSelectAgent("orchestrator")}
           />
 
-          {showParallelZone ? (
+          {/* Specialist parallel zone — only while routing or once specialists fired */}
+          {showSpecialists && (
             <>
               <Arrow />
               <ParallelZone
@@ -510,28 +514,34 @@ export default function WorkbenchGraph({
                 selectedAgent={selectedAgent}
                 onSelectAgent={handleSelectAgent}
               />
-              <Arrow />
             </>
-          ) : (
-            <Arrow />
           )}
 
-          {/* Summary */}
-          <AgentNodeCard
-            agentType="summary"
-            step={stepMap.get("summary")}
-            selected={selectedAgent === "summary"}
-            onClick={() => handleSelectAgent("summary")}
-          />
-          <Arrow />
+          {/* Summary — only if it ran */}
+          {showSummary && (
+            <>
+              <Arrow />
+              <AgentNodeCard
+                agentType="summary"
+                step={stepMap.get("summary")}
+                selected={selectedAgent === "summary"}
+                onClick={() => handleSelectAgent("summary")}
+              />
+            </>
+          )}
 
-          {/* Closer */}
-          <AgentNodeCard
-            agentType="closer"
-            step={stepMap.get("closer")}
-            selected={selectedAgent === "closer"}
-            onClick={() => handleSelectAgent("closer")}
-          />
+          {/* Closer — only if it ran */}
+          {showCloser && (
+            <>
+              <Arrow />
+              <AgentNodeCard
+                agentType="closer"
+                step={stepMap.get("closer")}
+                selected={selectedAgent === "closer"}
+                onClick={() => handleSelectAgent("closer")}
+              />
+            </>
+          )}
         </div>
       </div>
 

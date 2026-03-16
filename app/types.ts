@@ -33,7 +33,6 @@ export type WorkbenchStepStatus = "pending" | "running" | "done" | "error";
 
 export type AgentNodeType =
   | "orchestrator"
-  | "sentiment"
   | "clinical"
   | "billing"
   | "experience"

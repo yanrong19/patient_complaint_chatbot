@@ -56,6 +56,7 @@ ${toolResultsText}`,
     ],
     response_format: { type: "json_object" },
     temperature: 0.3,
+    max_tokens: 300,
   });
 
   const raw = response.choices[0].message.content ?? "{}";

@@ -24,14 +24,9 @@ const NODE_META: Record<
   string,
   { label: string; description: string; icon: string }
 > = {
-  sentiment_analyzer: {
-    label: "Sentiment Analyzer",
-    description: "Detecting patient emotional state and tone",
-    icon: "🧠",
-  },
   orchestrator: {
     label: "Orchestrator",
-    description: "Categorising issues, assigning priority, routing to specialists",
+    description: "Analysing sentiment, categorising issues, and routing to specialists",
     icon: "🎯",
   },
   clinical_agent: {
@@ -145,7 +140,7 @@ export async function POST(req: NextRequest) {
             }
 
             // Emit a rich agent_result with the relevant data
-            const resultPayload = buildResultPayload(nodeName, output);
+            const resultPayload = buildResultPayload(nodeName, output, finalState);
             if (resultPayload) {
               send({
                 type: "agent_result",
@@ -181,6 +176,42 @@ export async function POST(req: NextRequest) {
           ? `${closerContext}\n\nThe patient's registered name is "${userName}". Address them by their first name where natural.`
           : closerContext;
 
+        // ── Start suggestions generation in parallel with streaming ────────
+        // By the time streaming finishes the suggestions call is usually done,
+        // so the user experiences zero extra wait after seeing the response.
+        const suggestionsPromise: Promise<string[]> = client.chat.completions
+          .create({
+            model: process.env.AZURE_OPENAI_DEPLOYMENT!,
+            messages: [
+              {
+                role: "system",
+                content: `You are a hospital patient complaints assistant. Based on the conversation context, generate 2-3 short follow-up suggestions the patient might want to say next. Rules:
+- Each suggestion must be under 9 words
+- Use natural patient language (first-person where appropriate)
+- Cover different angles: e.g. asking for status, requesting action, providing more detail
+- Return JSON only: { "suggestions": ["...", "...", "..."] }`,
+              },
+              {
+                role: "user",
+                content: `Patient said: "${message.slice(0, 200)}"\nContext: ${finalState.orchestratorAnalysis?.isComplaint ? `complaint about ${finalState.orchestratorAnalysis.categories?.join(", ")}` : "general enquiry"}\n\nGenerate follow-up suggestions.`,
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.8,
+            max_tokens: 80,
+          })
+          .then((res) => {
+            const raw = res.choices[0]?.message?.content ?? "{}";
+            const parsed = JSON.parse(raw) as { suggestions?: unknown };
+            if (Array.isArray(parsed.suggestions)) {
+              return (parsed.suggestions as unknown[])
+                .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+                .slice(0, 3);
+            }
+            return [];
+          })
+          .catch(() => []);
+
         const llmStream = await client.chat.completions.create({
           model: process.env.AZURE_OPENAI_DEPLOYMENT!,
           messages: [
@@ -202,38 +233,8 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Generate 2-3 contextual follow-up suggestions
-        let suggestions: string[] = [];
-        try {
-          const suggestionRes = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT!,
-            messages: [
-              {
-                role: "system",
-                content: `You are a hospital patient complaints assistant. Based on the assistant's last reply, generate 2-3 short follow-up suggestions the patient might want to say next. Rules:
-- Each suggestion must be under 9 words
-- Use natural patient language (first-person where appropriate)
-- Cover different angles: e.g. asking for status, requesting action, providing more detail
-- Never repeat what was just said
-- Return JSON only: { "suggestions": ["...", "...", "..."] }`,
-              },
-              {
-                role: "user",
-                content: `Assistant replied: "${fullResponse.slice(0, 400)}"\n\nGenerate follow-up suggestions.`,
-              },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.8,
-            max_tokens: 80,
-          });
-          const raw = suggestionRes.choices[0]?.message?.content ?? "{}";
-          const parsed = JSON.parse(raw) as { suggestions?: unknown };
-          if (Array.isArray(parsed.suggestions)) {
-            suggestions = (parsed.suggestions as unknown[])
-              .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
-              .slice(0, 3);
-          }
-        } catch { /* suggestions remain empty */ }
+        // Await suggestions — parallel call started before streaming, usually ready by now
+        const suggestions = await suggestionsPromise;
 
         send({
           type: "done",
@@ -263,17 +264,48 @@ export async function POST(req: NextRequest) {
 
 function buildResultPayload(
   nodeName: string,
-  output: Partial<AgentState>
+  output: Partial<AgentState>,
+  state: Partial<AgentState>
 ): Record<string, unknown> | null {
   switch (nodeName) {
     case "sentiment_analyzer":
       return (output.sentiment ?? null) as unknown as Record<string, unknown>;
 
-    case "orchestrator":
+    case "orchestrator": {
+      const sentiment = output.sentiment;
+      const pending = output.pendingComplaint ?? null;
+      const toolCalls: Record<string, unknown>[] = [];
+      if (sentiment) {
+        toolCalls.push({
+          tool: "analyze_sentiment",
+          label: "Analyze Patient Sentiment",
+          input: { message: "patient message" },
+          output: sentiment as unknown as Record<string, unknown>,
+        });
+      }
+      if (pending) {
+        toolCalls.push({
+          tool: "generate_complaint_log",
+          label: "Generate Complaint Log",
+          input: {
+            patientName: pending.patient_name,
+            complaintType: pending.complaint_type,
+            urgency: pending.urgency,
+          },
+          output: {
+            complaint_id: pending.complaint_id,
+            assigned_team: pending.assigned_team,
+            status: pending.status,
+          },
+        });
+      }
       return {
         ...((output.orchestratorAnalysis ?? {}) as unknown as Record<string, unknown>),
         complaintId: output.complaintId,
+        sentiment: output.sentiment,
+        toolCalls,
       };
+    }
 
     case "clinical_agent":
     case "billing_agent":
@@ -296,8 +328,23 @@ function buildResultPayload(
     case "summary_agent":
       return (output.sbarSummary ?? null) as unknown as Record<string, unknown>;
 
-    case "closer_agent":
-      return { status: "Response context prepared" };
+    case "closer_agent": {
+      const analysis = state.orchestratorAnalysis;
+      const sentiment = state.sentiment;
+      const agentResults = state.agentResults ?? [];
+      return {
+        emotion: sentiment?.emotion ?? "neutral",
+        emotionIntensity: sentiment?.intensity ?? "low",
+        emotionSummary: sentiment?.summary ?? null,
+        priority: (analysis?.priority ?? "low").toUpperCase(),
+        coreIssues: analysis?.coreIssues ?? [],
+        requiresEscalation: analysis?.requiresImmediateEscalation ?? false,
+        isComplaint: analysis?.isComplaint ?? false,
+        specialistAgents: agentResults.map((r) => r.agentLabel),
+        hasSBAR: !!state.sbarSummary,
+        complaintId: state.complaintId ?? null,
+      };
+    }
 
     default:
       return null;

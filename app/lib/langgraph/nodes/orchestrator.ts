@@ -1,6 +1,6 @@
 import { getAzureOpenAIClient } from "../../azureOpenAI";
 import { buildComplaint } from "../../store";
-import { AgentState, OrchestratorAnalysis, AgentCategory } from "../state";
+import { AgentState, OrchestratorAnalysis, AgentCategory, SentimentResult } from "../state";
 import { Complaint, ComplaintType, UrgencyLevel } from "../../../types";
 import { safeParseJSON } from "../../safeJson";
 
@@ -8,6 +8,11 @@ const ORCHESTRATOR_FALLBACK: OrchestratorAnalysis = {
   isComplaint: false, coreIssues: [], categories: [], priority: "low",
   assignedAgents: [], reasoning: "Orchestrator unavailable.",
   requiresImmediateEscalation: false, patientName: null, complaintType: null,
+};
+
+const SENTIMENT_FALLBACK: SentimentResult = {
+  emotion: "neutral", intensity: "low",
+  summary: "Unable to analyze sentiment.", tone: "unknown",
 };
 
 const URGENCY_MAP: Record<string, UrgencyLevel> = { high: "high", medium: "medium", low: "low" };
@@ -47,31 +52,55 @@ const CATEGORY_KEYWORDS: Record<AgentCategory, string[]> = {
   ],
 };
 
-
 export async function orchestratorNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
   try {
-  const client = getAzureOpenAIClient();
+    const client = getAzureOpenAIClient();
 
-  const sentimentContext = state.sentiment
-    ? `Patient emotion: ${state.sentiment.emotion} (intensity: ${state.sentiment.intensity}). ${state.sentiment.summary}`
-    : "Sentiment not yet analyzed.";
+    const historyContext =
+      state.conversationHistory.length > 0
+        ? state.conversationHistory
+            .slice(-4)
+            .map((m) => `${m.role}: ${m.content}`)
+            .join("\n")
+        : "No prior conversation.";
 
-  const historyContext =
-    state.conversationHistory.length > 0
-      ? state.conversationHistory
-          .slice(-4)
-          .map((m) => `${m.role}: ${m.content}`)
-          .join("\n")
-      : "No prior conversation.";
+    // ── Run sentiment analysis and orchestration in parallel ───────────────
+    const [sentimentRes, orchRes] = await Promise.all([
+      client.chat.completions.create({
+        model: process.env.AZURE_OPENAI_DEPLOYMENT!,
+        messages: [
+          {
+            role: "system",
+            content: `You are a clinical sentiment analysis specialist for a hospital patient relations team.
+Analyze the emotional state and communication tone of a patient complaint.
+Return a JSON object only — no markdown, no explanation.
 
-  const response = await client.chat.completions.create({
-    model: process.env.AZURE_OPENAI_DEPLOYMENT!,
-    messages: [
-      {
-        role: "system",
-        content: `You are the Master Orchestrator Agent for a hospital patient complaints management system.
+Schema:
+{
+  "emotion": "anger" | "sadness" | "confusion" | "frustration" | "distress" | "neutral",
+  "intensity": "low" | "medium" | "high",
+  "summary": "one sentence describing the patient's emotional state",
+  "tone": "brief description of how the patient is communicating",
+  "reasoning": "one sentence explaining which specific words led to this assessment"
+}`,
+          },
+          {
+            role: "user",
+            content: `Analyze the sentiment of this patient message:\n\n"${state.userMessage}"`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 150,
+      }),
+      client.chat.completions.create({
+        model: process.env.AZURE_OPENAI_DEPLOYMENT!,
+        messages: [
+          {
+            role: "system",
+            content: `You are the Master Orchestrator Agent for a hospital patient complaints management system.
 Your job is to:
 1. Determine whether the patient message is an actual complaint or issue that requires action
 2. Extract the core issue(s) from genuine complaints
@@ -107,60 +136,64 @@ Schema:
   "patientName": "extracted name or null",
   "complaintType": "most specific category string"
 }`,
-      },
-      {
-        role: "user",
-        content: `Sentiment context: ${sentimentContext}
+          },
+          {
+            role: "user",
+            content: `Recent conversation:\n${historyContext}\n\nPatient message: "${state.userMessage}"`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_tokens: 300,
+      }),
+    ]);
 
-Recent conversation:
-${historyContext}
-
-Patient complaint: "${state.userMessage}"`,
-      },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.1,
-  });
-
-  const raw = response.choices[0].message.content ?? "{}";
-  const analysis = safeParseJSON<OrchestratorAnalysis>(raw, { ...ORCHESTRATOR_FALLBACK });
-
-  // Validate and sanitize assignedAgents
-  const validCategories: AgentCategory[] = [
-    "clinical", "billing", "experience", "compliance", "scheduling",
-  ];
-  analysis.assignedAgents = (analysis.assignedAgents ?? []).filter((a) =>
-    validCategories.includes(a as AgentCategory)
-  ) as AgentCategory[];
-
-  // Auto-detect compliance keywords the LLM may have missed
-  const lowerMsg = state.userMessage.toLowerCase();
-  const complianceHit = CATEGORY_KEYWORDS.compliance.some((kw) =>
-    lowerMsg.includes(kw)
-  );
-  if (complianceHit && !analysis.assignedAgents.includes("compliance")) {
-    analysis.assignedAgents.push("compliance");
-    analysis.requiresImmediateEscalation = true;
-  }
-
-  // Build a complaint draft in memory — NOT saved to DB until patient clicks Submit
-  let complaintId = state.complaintId;
-  let pendingComplaint: Complaint | null = state.pendingComplaint ?? null;
-  if (!complaintId && analysis.isComplaint === true && analysis.assignedAgents.length > 0) {
-    const patientName = analysis.patientName ?? "Unknown Patient";
-    const urgency = URGENCY_MAP[analysis.priority] ?? "medium";
-    const primaryCategory = analysis.assignedAgents[0] ?? analysis.categories[0] ?? "other";
-    const complaintType: ComplaintType = COMPLAINT_TYPE_MAP[primaryCategory as AgentCategory] ?? "other";
-    pendingComplaint = buildComplaint(
-      patientName,
-      complaintType,
-      analysis.coreIssues.join("; "),
-      urgency as UrgencyLevel
+    const sentiment = safeParseJSON<SentimentResult>(
+      sentimentRes.choices[0].message.content ?? "{}",
+      SENTIMENT_FALLBACK
     );
-    complaintId = pendingComplaint.complaint_id;
-  }
 
-  return { orchestratorAnalysis: analysis, complaintId, pendingComplaint };
+    const analysis = safeParseJSON<OrchestratorAnalysis>(
+      orchRes.choices[0].message.content ?? "{}",
+      { ...ORCHESTRATOR_FALLBACK }
+    );
+
+    // Validate and sanitize assignedAgents
+    const validCategories: AgentCategory[] = [
+      "clinical", "billing", "experience", "compliance", "scheduling",
+    ];
+    analysis.assignedAgents = (analysis.assignedAgents ?? []).filter((a) =>
+      validCategories.includes(a as AgentCategory)
+    ) as AgentCategory[];
+
+    // Auto-detect compliance keywords the LLM may have missed
+    const lowerMsg = state.userMessage.toLowerCase();
+    const complianceHit = CATEGORY_KEYWORDS.compliance.some((kw) =>
+      lowerMsg.includes(kw)
+    );
+    if (complianceHit && !analysis.assignedAgents.includes("compliance")) {
+      analysis.assignedAgents.push("compliance");
+      analysis.requiresImmediateEscalation = true;
+    }
+
+    // Build a complaint draft in memory — NOT saved to DB until patient clicks Submit
+    let complaintId = state.complaintId;
+    let pendingComplaint: Complaint | null = state.pendingComplaint ?? null;
+    if (!complaintId && analysis.isComplaint === true && analysis.assignedAgents.length > 0) {
+      const patientName = analysis.patientName ?? "Unknown Patient";
+      const urgency = URGENCY_MAP[analysis.priority] ?? "medium";
+      const primaryCategory = analysis.assignedAgents[0] ?? analysis.categories[0] ?? "other";
+      const complaintType: ComplaintType = COMPLAINT_TYPE_MAP[primaryCategory as AgentCategory] ?? "other";
+      pendingComplaint = buildComplaint(
+        patientName,
+        complaintType,
+        analysis.coreIssues.join("; "),
+        urgency as UrgencyLevel
+      );
+      complaintId = pendingComplaint.complaint_id;
+    }
+
+    return { sentiment, orchestratorAnalysis: analysis, complaintId, pendingComplaint };
   } catch {
     return { orchestratorAnalysis: { ...ORCHESTRATOR_FALLBACK }, complaintId: state.complaintId };
   }

@@ -1,6 +1,5 @@
 import { StateGraph, START, END, Send } from "@langchain/langgraph";
 import { AgentStateAnnotation, AgentState, AgentCategory } from "./state";
-import { sentimentAnalyzerNode } from "./nodes/sentimentAnalyzer";
 import { orchestratorNode } from "./nodes/orchestrator";
 import { clinicalAgentNode } from "./nodes/clinicalAgent";
 import { billingAgentNode } from "./nodes/billingAgent";
@@ -18,30 +17,28 @@ const AGENT_NODE_MAP: Record<AgentCategory, string> = {
   scheduling: "scheduling_agent",
 };
 
-// Conditional routing from orchestrator → worker agents (parallel fan-out)
 function routeAfterOrchestrator(state: AgentState): Send[] {
-  const assigned = state.orchestratorAnalysis?.assignedAgents ?? [];
+  const analysis = state.orchestratorAnalysis;
+  const assigned = analysis?.assignedAgents ?? [];
 
   if (assigned.length === 0) {
-    // No specialist needed — route directly to summary
+    // Non-complaint (greeting, question, etc.) — skip summary, go straight to closer
+    if (!analysis?.isComplaint) {
+      return [new Send("closer_agent", state)];
+    }
+    // Complaint with no matched specialist — run summary for SBAR
     return [new Send("summary_agent", state)];
   }
 
+  // Fan out to relevant specialist agents in parallel
   return assigned.map(
     (category) => new Send(AGENT_NODE_MAP[category as AgentCategory], state)
   );
 }
 
-// All worker agents fan back in to summary_agent
-// LangGraph waits for all parallel Send branches before continuing
-
 export function buildComplaintGraph() {
   const graph = new StateGraph(AgentStateAnnotation)
-    // ── Utility agents ──────────────────────────────────────────────────
-    .addNode("sentiment_analyzer", sentimentAnalyzerNode)
-    .addNode("summary_agent", summaryAgentNode)
-    .addNode("closer_agent", closerAgentNode)
-    // ── Orchestrator ─────────────────────────────────────────────────────
+    // ── Orchestrator (runs sentiment analysis internally as a tool) ──────
     .addNode("orchestrator", orchestratorNode)
     // ── Specialist worker agents ─────────────────────────────────────────
     .addNode("clinical_agent", clinicalAgentNode)
@@ -49,15 +46,14 @@ export function buildComplaintGraph() {
     .addNode("experience_agent", experienceAgentNode)
     .addNode("compliance_agent", complianceAgentNode)
     .addNode("scheduling_agent", schedulingAgentNode)
+    // ── Utility agents ───────────────────────────────────────────────────
+    .addNode("summary_agent", summaryAgentNode)
+    .addNode("closer_agent", closerAgentNode)
 
     // ── Edges ─────────────────────────────────────────────────────────────
-    .addEdge(START, "sentiment_analyzer")
-    .addEdge("sentiment_analyzer", "orchestrator")
-
-    // Orchestrator fans out to worker agents (or directly to summary if none needed)
+    .addEdge(START, "orchestrator")
     .addConditionalEdges("orchestrator", routeAfterOrchestrator)
 
-    // All worker agents fan back in to summary_agent
     .addEdge("clinical_agent", "summary_agent")
     .addEdge("billing_agent", "summary_agent")
     .addEdge("experience_agent", "summary_agent")
@@ -70,8 +66,6 @@ export function buildComplaintGraph() {
   return graph.compile();
 }
 
-// Compile a fresh graph per request — sharing a compiled graph across concurrent
-// requests can corrupt LangGraph's internal channel state.
 export function getComplaintGraph() {
   return buildComplaintGraph();
 }
