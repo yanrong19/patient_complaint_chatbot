@@ -23,6 +23,7 @@ const EMOTION_TONE_GUIDE: Record<string, string> = {
 export async function closerAgentNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  try {
   const analysis = state.orchestratorAnalysis;
   const sentiment = state.sentiment;
   const sbar = state.sbarSummary;
@@ -82,4 +83,7 @@ RESPONSE GUIDELINES:
 `.trim();
 
   return { closerContext };
+  } catch {
+    return { closerContext: "You are Kira, a hospital patient support assistant. Apologise warmly and let the patient know their concern has been noted and a staff member will follow up shortly." };
+  }
 }

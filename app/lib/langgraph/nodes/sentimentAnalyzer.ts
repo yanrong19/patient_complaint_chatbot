@@ -1,9 +1,16 @@
 import { getAzureOpenAIClient } from "../../azureOpenAI";
 import { AgentState, SentimentResult } from "../state";
+import { safeParseJSON } from "../../safeJson";
+
+const SENTIMENT_FALLBACK: SentimentResult = {
+  emotion: "neutral", intensity: "low",
+  summary: "Unable to analyze sentiment.", tone: "unknown",
+};
 
 export async function sentimentAnalyzerNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  try {
   const client = getAzureOpenAIClient();
 
   const response = await client.chat.completions.create({
@@ -34,6 +41,9 @@ Schema:
   });
 
   const raw = response.choices[0].message.content ?? "{}";
-  const sentiment = JSON.parse(raw) as SentimentResult;
+  const sentiment = safeParseJSON<SentimentResult>(raw, SENTIMENT_FALLBACK);
   return { sentiment };
+  } catch {
+    return { sentiment: SENTIMENT_FALLBACK };
+  }
 }

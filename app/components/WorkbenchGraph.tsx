@@ -136,16 +136,21 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
   }
 }
 
+interface ToolCallRecord {
+  tool: string;
+  label: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+}
+
 // ── Agent detail panel (shown when a node is clicked) ────────────────────────
 function AgentDetailPanel({
   agentType,
   step,
-  toolSteps,
   onClose,
 }: {
   agentType: AgentNodeType;
   step?: WorkbenchStep;
-  toolSteps: WorkbenchStep[];
   onClose: () => void;
 }) {
   const [rawOpen, setRawOpen] = useState(false);
@@ -228,36 +233,40 @@ function AgentDetailPanel({
           </div>
         )}
 
-        {/* Tool calls */}
-        {toolSteps.length > 0 && (
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-              🔧 Tools Used
-            </p>
-            <div className="space-y-1.5">
-              {toolSteps.map((ts) => (
-                <div key={ts.id} className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-700/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-mono text-cyan-400">{ts.tool}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${STATUS_BADGE[ts.status]}`}>
-                      {STATUS_LABEL[ts.status]}
-                    </span>
+        {/* Tool calls — read from agent output */}
+        {(() => {
+          const toolCalls = (step?.output?.toolCalls ?? []) as ToolCallRecord[];
+          if (!toolCalls.length) return null;
+          return (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                🔧 Tools Invoked
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {toolCalls.map((tc) => (
+                  <div
+                    key={tc.tool}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-slate-700/40"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      className="w-3 h-3 text-green-400 flex-shrink-0"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-[10px] font-medium text-slate-200">{tc.label}</span>
                   </div>
-                  {ts.input && Object.keys(ts.input).length > 0 && (
-                    <pre className="text-[9px] text-slate-400 overflow-x-auto whitespace-pre-wrap break-words">
-                      {JSON.stringify(ts.input, null, 2)}
-                    </pre>
-                  )}
-                  {ts.output && Object.keys(ts.output).length > 0 && (
-                    <pre className="text-[9px] text-teal-400/80 overflow-x-auto whitespace-pre-wrap break-words mt-1">
-                      {JSON.stringify(ts.output, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Raw JSON toggle */}
         {hasOutput && (
@@ -427,11 +436,6 @@ export default function WorkbenchGraph({
     if (step.agentType) stepMap.set(step.agentType, step);
   }
 
-  // Tool call steps (type tool_call/tool_result, no agentType) — associated with orchestrator
-  const toolStepsForOrchestrator = steps.filter(
-    (s) => (s.type === "tool_call" || s.type === "tool_result") && !s.agentType
-  );
-
   const activeSpecialists = SPECIALIST_ORDER.filter((t) => stepMap.has(t));
   const orchestratorRunning = stepMap.get("orchestrator")?.status === "running";
   const showParallelZone =
@@ -536,7 +540,6 @@ export default function WorkbenchGraph({
         <AgentDetailPanel
           agentType={selectedAgent}
           step={stepMap.get(selectedAgent)}
-          toolSteps={selectedAgent === "orchestrator" ? toolStepsForOrchestrator : []}
           onClose={() => setSelectedAgent(null)}
         />
       )}

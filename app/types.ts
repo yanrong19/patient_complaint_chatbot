@@ -6,6 +6,7 @@ export interface Message {
   content: string;
   timestamp: number;
   complaintCard?: Complaint;
+  suggestions?: string[];
 }
 
 export type ComplaintType = "billing" | "clinical" | "staff" | "facility" | "other";
@@ -100,12 +101,14 @@ export interface SSEToolStart {
   type: "tool_start";
   tool: string;
   input: Record<string, unknown>;
+  agent?: string;
 }
 
 export interface SSEToolResult {
   type: "tool_result";
   tool: string;
   output: Record<string, unknown>;
+  agent?: string;
 }
 
 export interface SSEAgentStart {
@@ -127,6 +130,7 @@ export interface SSEDone {
   fullResponse: string;
   complaint?: Complaint;
   complaintId?: string;
+  suggestions?: string[];
 }
 
 export interface SSEError {

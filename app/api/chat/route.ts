@@ -9,7 +9,8 @@ import {
   SBARSummary,
 } from "../../lib/langgraph/state";
 import { Message } from "../../types";
-import { getComplaint } from "../../lib/store";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Vercel Hobby plan max; upgrade to Pro for 300s
@@ -72,11 +73,14 @@ const NODE_META: Record<
 
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
-  const { message, conversationHistory, existingComplaintId } = (await req.json()) as {
+  const { message, conversationHistory, existingComplaintId, userName } = (await req.json()) as {
     message: string;
     conversationHistory: Message[];
     existingComplaintId?: string | null;
+    userName?: string | null;
   };
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -98,6 +102,7 @@ export async function POST(req: NextRequest) {
           })),
           agentResults: [],
           complaintId: existingComplaintId ?? null,
+          userId: userId,
         };
 
         // ── Phase 1: Stream graph execution (all analysis agents) ──────────
@@ -132,6 +137,13 @@ export async function POST(req: NextRequest) {
               });
             }
 
+            // Emit tool call events from agent results
+            const latestAgentResult = output.agentResults?.[output.agentResults.length - 1];
+            for (const tc of latestAgentResult?.toolCalls ?? []) {
+              send({ type: "tool_start", tool: tc.tool, input: tc.input, agent: nodeName });
+              send({ type: "tool_result", tool: tc.tool, output: tc.output, agent: nodeName });
+            }
+
             // Emit a rich agent_result with the relevant data
             const resultPayload = buildResultPayload(nodeName, output);
             if (resultPayload) {
@@ -145,9 +157,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // ── Include complaint data in done event (only when newly created) ──
+        // ── Include complaint draft in done event (only when newly built) ──
+        // The complaint is a draft at this point — it will only be persisted to the
+        // database when the patient explicitly clicks "Submit Complaint".
         const isNewComplaint = finalState.complaintId && finalState.complaintId !== existingComplaintId;
-        const complaintForDone = isNewComplaint ? getComplaint(finalState.complaintId!) : undefined;
+        const complaintForDone = isNewComplaint ? (finalState.pendingComplaint ?? undefined) : undefined;
 
         // ── Phase 2: Stream final response tokens ──────────────────────────
         const closerContext = finalState.closerContext;
@@ -163,10 +177,14 @@ export async function POST(req: NextRequest) {
           content: m.content,
         }));
 
+        const systemPrompt = userName
+          ? `${closerContext}\n\nThe patient's registered name is "${userName}". Address them by their first name where natural.`
+          : closerContext;
+
         const llmStream = await client.chat.completions.create({
           model: process.env.AZURE_OPENAI_DEPLOYMENT!,
           messages: [
-            { role: "system", content: closerContext },
+            { role: "system", content: systemPrompt },
             ...chatHistory,
             { role: "user", content: message },
           ],
@@ -184,10 +202,44 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Generate 2-3 contextual follow-up suggestions
+        let suggestions: string[] = [];
+        try {
+          const suggestionRes = await client.chat.completions.create({
+            model: process.env.AZURE_OPENAI_DEPLOYMENT!,
+            messages: [
+              {
+                role: "system",
+                content: `You are a hospital patient complaints assistant. Based on the assistant's last reply, generate 2-3 short follow-up suggestions the patient might want to say next. Rules:
+- Each suggestion must be under 9 words
+- Use natural patient language (first-person where appropriate)
+- Cover different angles: e.g. asking for status, requesting action, providing more detail
+- Never repeat what was just said
+- Return JSON only: { "suggestions": ["...", "...", "..."] }`,
+              },
+              {
+                role: "user",
+                content: `Assistant replied: "${fullResponse.slice(0, 400)}"\n\nGenerate follow-up suggestions.`,
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.8,
+            max_tokens: 80,
+          });
+          const raw = suggestionRes.choices[0]?.message?.content ?? "{}";
+          const parsed = JSON.parse(raw) as { suggestions?: unknown };
+          if (Array.isArray(parsed.suggestions)) {
+            suggestions = (parsed.suggestions as unknown[])
+              .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+              .slice(0, 3);
+          }
+        } catch { /* suggestions remain empty */ }
+
         send({
           type: "done",
           fullResponse,
           ...(complaintForDone ? { complaint: complaintForDone, complaintId: finalState.complaintId } : {}),
+          ...(suggestions.length > 0 ? { suggestions } : {}),
         });
       } catch (err) {
         const message =
@@ -237,6 +289,7 @@ function buildResultPayload(
         urgency: result.urgency,
         analysis: result.analysis,
         reasoning: result.reasoning,
+        toolCalls: result.toolCalls ?? [],
       };
     }
 

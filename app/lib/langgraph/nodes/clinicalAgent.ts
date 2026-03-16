@@ -1,10 +1,20 @@
 import { getAzureOpenAIClient } from "../../azureOpenAI";
 import { AgentState, AgentResult } from "../state";
+import { runClinicalTools } from "../../tools/clinicalTools";
+import { safeParseJSON } from "../../safeJson";
 
 export async function clinicalAgentNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  const toolCalls = runClinicalTools({
+    userMessage: state.userMessage,
+    coreIssues: state.orchestratorAnalysis?.coreIssues,
+  });
+  try {
   const client = getAzureOpenAIClient();
+  const toolResultsText = toolCalls.map(tc =>
+    `[${tc.label}]\n${JSON.stringify(tc.output, null, 2)}`
+  ).join("\n\n");
 
   const response = await client.chat.completions.create({
     model: process.env.AZURE_OPENAI_DEPLOYMENT!,
@@ -14,24 +24,26 @@ export async function clinicalAgentNode(
         content: `You are the Clinical Quality Agent for a hospital complaints management system.
 You specialise in complaints about medical treatment, nursing care, medication errors, misdiagnosis, and health outcomes.
 
+You have access to real hospital system data retrieved by your tools. Use it to ground your analysis.
+
 Your responsibilities:
-- Identify the specific clinical concern (treatment, diagnosis, medication, procedure, nursing care)
-- Assess whether this requires an EHR review or clinical audit
-- Determine if the Chief Medical Officer or department head needs to be notified
-- Flag any patient safety incidents
+- Identify the specific clinical concern using the EHR and guidelines data
+- Assess whether this is a patient safety incident
+- Determine if the CMO or department head needs to be notified
+- Reference specific data from the tool results in your findings
 
 Return JSON only.
 
 Schema:
 {
-  "analysis": "clinical assessment of the complaint in 2-3 sentences",
-  "findings": "specific clinical concern identified",
+  "analysis": "clinical assessment grounded in EHR/guidelines data (2-3 sentences)",
+  "findings": "specific clinical concern with reference to tool data",
   "recommendedActions": ["action 1", "action 2", "action 3"],
   "urgency": "routine" | "urgent" | "critical",
   "ehrReviewRequired": true | false,
   "notifyDepartmentHead": true | false,
   "patientSafetyIncident": true | false,
-  "reasoning": "one sentence explaining why this urgency level and these actions were selected"
+  "reasoning": "one sentence referencing the specific tool evidence"
 }`,
       },
       {
@@ -39,7 +51,10 @@ Schema:
         content: `Patient complaint: "${state.userMessage}"
 
 Orchestrator analysis: ${JSON.stringify(state.orchestratorAnalysis, null, 2)}
-Patient sentiment: ${JSON.stringify(state.sentiment, null, 2)}`,
+Patient sentiment: ${JSON.stringify(state.sentiment, null, 2)}
+
+TOOL RESULTS:
+${toolResultsText}`,
       },
     ],
     response_format: { type: "json_object" },
@@ -47,23 +62,22 @@ Patient sentiment: ${JSON.stringify(state.sentiment, null, 2)}`,
   });
 
   const raw = response.choices[0].message.content ?? "{}";
-  const parsed = JSON.parse(raw) as {
-    analysis: string;
-    findings: string;
-    recommendedActions: string[];
-    urgency: "routine" | "urgent" | "critical";
-    reasoning?: string;
-  };
+  const parsed = safeParseJSON<{
+    analysis: string; findings: string;
+    recommendedActions: string[]; urgency: "routine" | "urgent" | "critical"; reasoning?: string;
+  }>(raw, { analysis: "", findings: "", recommendedActions: [], urgency: "urgent" });
 
   const result: AgentResult = {
-    agent: "clinical",
-    agentLabel: "Clinical Quality Agent",
-    analysis: parsed.analysis,
-    findings: parsed.findings,
+    agent: "clinical", agentLabel: "Clinical Quality Agent",
+    analysis: parsed.analysis, findings: parsed.findings,
     recommendedActions: parsed.recommendedActions ?? [],
     urgency: parsed.urgency ?? "urgent",
-    reasoning: parsed.reasoning,
+    reasoning: parsed.reasoning, toolCalls,
   };
-
   return { agentResults: [result] };
+  } catch {
+    return { agentResults: [{ agent: "clinical", agentLabel: "Clinical Quality Agent",
+      analysis: "Analysis unavailable.", findings: "Unable to complete clinical review.",
+      recommendedActions: ["Manual clinical review required"], urgency: "urgent", toolCalls }] };
+  }
 }

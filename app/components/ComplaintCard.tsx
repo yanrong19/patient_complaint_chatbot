@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Complaint, ComplaintStatus, UrgencyLevel } from "../types";
 
 interface ComplaintCardProps {
@@ -30,9 +30,31 @@ function formatDate(iso: string): string {
   }
 }
 
+function isComplaintSubmitted(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const saved = sessionStorage.getItem("kira-submitted-complaints");
+    return saved ? (JSON.parse(saved) as string[]).includes(id) : false;
+  } catch { return false; }
+}
+
+function markComplaintSubmitted(id: string) {
+  try {
+    const saved = sessionStorage.getItem("kira-submitted-complaints");
+    const ids: string[] = saved ? JSON.parse(saved) : [];
+    if (!ids.includes(id)) ids.push(id);
+    sessionStorage.setItem("kira-submitted-complaints", JSON.stringify(ids));
+  } catch {}
+}
+
 export default function ComplaintCard({ complaint }: ComplaintCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  useEffect(() => {
+    if (isComplaintSubmitted(complaint.complaint_id)) setSubmitted(true);
+  }, [complaint.complaint_id]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const status = STATUS_CONFIG[complaint.status] ?? STATUS_CONFIG.received;
   const urgency = URGENCY_CONFIG[complaint.urgency] ?? URGENCY_CONFIG.medium;
@@ -114,16 +136,39 @@ export default function ComplaintCard({ complaint }: ComplaintCardProps) {
       )}
 
       {/* Submit footer */}
-      <div className="px-3 py-2.5 border-t border-slate-700/40 flex items-center justify-between gap-3">
-        <p className="text-[10px] text-slate-500">
-          Would you like to formally submit this complaint?
-        </p>
-        <button
-          onClick={() => setSubmitted(true)}
-          className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors"
-        >
-          Submit Complaint
-        </button>
+      <div className="px-3 py-2.5 border-t border-slate-700/40 space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] text-slate-500">
+            Would you like to formally submit this complaint?
+          </p>
+          <button
+            onClick={async () => {
+              setSubmitError("");
+              setSubmitting(true);
+              try {
+                const res = await fetch("/api/complaints/submit", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(complaint),
+                });
+                if (!res.ok) throw new Error("Submission failed.");
+                markComplaintSubmitted(complaint.complaint_id);
+                setSubmitted(true);
+              } catch {
+                setSubmitError("Could not submit. Please try again.");
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            disabled={submitting}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            {submitting ? "Submitting…" : "Submit Complaint"}
+          </button>
+        </div>
+        {submitError && (
+          <p className="text-[10px] text-red-400">{submitError}</p>
+        )}
       </div>
     </div>
   );

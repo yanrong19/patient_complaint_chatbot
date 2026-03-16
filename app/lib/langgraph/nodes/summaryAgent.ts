@@ -1,9 +1,11 @@
 import { getAzureOpenAIClient } from "../../azureOpenAI";
 import { AgentState, SBARSummary } from "../state";
+import { safeParseJSON } from "../../safeJson";
 
 export async function summaryAgentNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  try {
   const client = getAzureOpenAIClient();
 
   const agentResultsText = state.agentResults
@@ -54,6 +56,19 @@ ${agentResultsText || "No specialist agents were invoked."}`,
   });
 
   const raw = response.choices[0].message.content ?? "{}";
-  const sbarSummary = JSON.parse(raw) as SBARSummary;
+  const sbarSummary = safeParseJSON<SBARSummary>(raw, {
+    situation: state.userMessage,
+    background: "Summary could not be generated.",
+    assessment: state.agentResults.map((r) => r.findings).filter(Boolean).join(" ") || "See specialist findings.",
+    recommendation: "Manual review required.",
+  });
   return { sbarSummary };
+  } catch {
+    return { sbarSummary: {
+      situation: state.userMessage,
+      background: "Summary unavailable.",
+      assessment: "An error occurred during summarisation.",
+      recommendation: "Please review the complaint manually.",
+    }};
+  }
 }

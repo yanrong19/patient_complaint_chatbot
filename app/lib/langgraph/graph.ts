@@ -70,10 +70,8 @@ export function buildComplaintGraph() {
   return graph.compile();
 }
 
-// Singleton graph instance (reused across requests)
-let _graph: ReturnType<typeof buildComplaintGraph> | null = null;
-
+// Compile a fresh graph per request — sharing a compiled graph across concurrent
+// requests can corrupt LangGraph's internal channel state.
 export function getComplaintGraph() {
-  if (!_graph) _graph = buildComplaintGraph();
-  return _graph;
+  return buildComplaintGraph();
 }

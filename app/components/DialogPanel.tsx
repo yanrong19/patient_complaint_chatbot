@@ -164,35 +164,55 @@ export default function DialogPanel({
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-          >
-            {msg.role === "assistant" && <AgentAvatar />}
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                msg.role === "user"
-                  ? "bg-cyan-600 text-white rounded-tr-sm"
-                  : "bg-slate-800 text-slate-100 rounded-tl-sm"
-              }`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {msg.content}
-              </p>
-              {msg.complaintCard && (
-                <ComplaintCard complaint={msg.complaintCard} />
-              )}
-              <p
-                className={`text-xs mt-1 ${
-                  msg.role === "user" ? "text-cyan-200" : "text-slate-500"
-                }`}
+        {messages.map((msg, idx) => {
+          const isLastAssistant =
+            msg.role === "assistant" &&
+            idx === messages.length - 1 &&
+            !isStreaming;
+          return (
+            <div key={msg.id}>
+              <div
+                className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
               >
-                {formatTime(msg.timestamp)}
-              </p>
+                {msg.role === "assistant" && <AgentAvatar />}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                    msg.role === "user"
+                      ? "bg-cyan-600 text-white rounded-tr-sm"
+                      : "bg-slate-800 text-slate-100 rounded-tl-sm"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {msg.content}
+                  </p>
+                  {msg.complaintCard && (
+                    <ComplaintCard complaint={msg.complaintCard} />
+                  )}
+                  <p
+                    className={`text-xs mt-1 ${
+                      msg.role === "user" ? "text-cyan-200" : "text-slate-500"
+                    }`}
+                  >
+                    {formatTime(msg.timestamp)}
+                  </p>
+                </div>
+              </div>
+              {isLastAssistant && msg.suggestions && msg.suggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2 ml-11">
+                  {msg.suggestions.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => onSend(s)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400/60 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Streaming response */}
         {isStreaming && streamingContent && (

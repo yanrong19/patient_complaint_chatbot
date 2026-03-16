@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String
+  password   String
+  createdAt  DateTime    @default(now())
+  complaints Complaint[]
+}
+
+model Complaint {
+  id                  String    @id @default(cuid())
+  complaintId         String    @unique
+  patientName         String
+  complaintType       String
+  description         String
+  urgency             String
+  status              String    @default("received")
+  assignedTeam        String
+  escalated           Boolean   @default(false)
+  escalationReason    String?
+  acknowledgementSent Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  lastUpdated         DateTime  @updatedAt
+  userId              String?
+  user                User?     @relation(fields: [userId], references: [id])
+}

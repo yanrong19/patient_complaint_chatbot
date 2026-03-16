@@ -1,7 +1,14 @@
 import { getAzureOpenAIClient } from "../../azureOpenAI";
-import { createComplaint } from "../../store";
+import { buildComplaint } from "../../store";
 import { AgentState, OrchestratorAnalysis, AgentCategory } from "../state";
-import { ComplaintType, UrgencyLevel } from "../../../types";
+import { Complaint, ComplaintType, UrgencyLevel } from "../../../types";
+import { safeParseJSON } from "../../safeJson";
+
+const ORCHESTRATOR_FALLBACK: OrchestratorAnalysis = {
+  isComplaint: false, coreIssues: [], categories: [], priority: "low",
+  assignedAgents: [], reasoning: "Orchestrator unavailable.",
+  requiresImmediateEscalation: false, patientName: null, complaintType: null,
+};
 
 const URGENCY_MAP: Record<string, UrgencyLevel> = { high: "high", medium: "medium", low: "low" };
 
@@ -44,6 +51,7 @@ const CATEGORY_KEYWORDS: Record<AgentCategory, string[]> = {
 export async function orchestratorNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
+  try {
   const client = getAzureOpenAIClient();
 
   const sentimentContext = state.sentiment
@@ -115,7 +123,7 @@ Patient complaint: "${state.userMessage}"`,
   });
 
   const raw = response.choices[0].message.content ?? "{}";
-  const analysis = JSON.parse(raw) as OrchestratorAnalysis;
+  const analysis = safeParseJSON<OrchestratorAnalysis>(raw, { ...ORCHESTRATOR_FALLBACK });
 
   // Validate and sanitize assignedAgents
   const validCategories: AgentCategory[] = [
@@ -135,21 +143,25 @@ Patient complaint: "${state.userMessage}"`,
     analysis.requiresImmediateEscalation = true;
   }
 
-  // Create complaint only when genuinely detected and not already filed this session
+  // Build a complaint draft in memory — NOT saved to DB until patient clicks Submit
   let complaintId = state.complaintId;
+  let pendingComplaint: Complaint | null = state.pendingComplaint ?? null;
   if (!complaintId && analysis.isComplaint === true && analysis.assignedAgents.length > 0) {
     const patientName = analysis.patientName ?? "Unknown Patient";
     const urgency = URGENCY_MAP[analysis.priority] ?? "medium";
     const primaryCategory = analysis.assignedAgents[0] ?? analysis.categories[0] ?? "other";
     const complaintType: ComplaintType = COMPLAINT_TYPE_MAP[primaryCategory as AgentCategory] ?? "other";
-    const result = createComplaint(
+    pendingComplaint = buildComplaint(
       patientName,
       complaintType,
       analysis.coreIssues.join("; "),
       urgency as UrgencyLevel
     );
-    complaintId = result.complaint_id;
+    complaintId = pendingComplaint.complaint_id;
   }
 
-  return { orchestratorAnalysis: analysis, complaintId };
+  return { orchestratorAnalysis: analysis, complaintId, pendingComplaint };
+  } catch {
+    return { orchestratorAnalysis: { ...ORCHESTRATOR_FALLBACK }, complaintId: state.complaintId };
+  }
 }

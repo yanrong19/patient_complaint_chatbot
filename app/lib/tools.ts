@@ -112,7 +112,7 @@ export const toolDefinitions: ChatCompletionTool[] = [
 export type ToolInput = Record<string, unknown>;
 export type ToolOutput = Record<string, unknown>;
 
-export function executeTool(toolName: string, input: ToolInput): ToolOutput {
+export async function executeTool(toolName: string, input: ToolInput): Promise<ToolOutput> {
   switch (toolName) {
     case "log_complaint": {
       const { patient_name, complaint_type, description, urgency } = input as {
@@ -126,7 +126,7 @@ export function executeTool(toolName: string, input: ToolInput): ToolOutput {
 
     case "check_complaint_status": {
       const { complaint_id } = input as { complaint_id: string };
-      const complaint = getComplaint(complaint_id);
+      const complaint = await getComplaint(complaint_id);
       if (!complaint) {
         return { error: `No complaint found with ID ${complaint_id}` };
       }

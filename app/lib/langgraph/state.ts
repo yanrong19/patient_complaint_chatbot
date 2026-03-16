@@ -1,4 +1,5 @@
 import { Annotation } from "@langchain/langgraph";
+import type { Complaint } from "../../types";
 
 export type EmotionType =
   | "anger"
@@ -37,6 +38,13 @@ export interface OrchestratorAnalysis {
   isComplaint: boolean;
 }
 
+export interface ToolCallRecord {
+  tool: string;
+  label: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+}
+
 export interface AgentResult {
   agent: AgentCategory;
   agentLabel: string;
@@ -45,6 +53,7 @@ export interface AgentResult {
   recommendedActions: string[];
   urgency: UrgencyLevel;
   reasoning?: string;
+  toolCalls?: ToolCallRecord[];
 }
 
 export interface SBARSummary {
@@ -67,6 +76,14 @@ export const AgentStateAnnotation = Annotation.Root({
   }),
   conversationHistory: Annotation<ConversationMessage[]>,
   complaintId: Annotation<string | null>({
+    value: (_prev, next) => next,
+    default: () => null,
+  }),
+  pendingComplaint: Annotation<Complaint | null>({
+    value: (_prev, next) => next,
+    default: () => null,
+  }),
+  userId: Annotation<string | null>({
     value: (_prev, next) => next,
     default: () => null,
   }),

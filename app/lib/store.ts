@@ -1,6 +1,6 @@
 import { Complaint, ComplaintType, UrgencyLevel } from "../types";
+import { prisma } from "./db";
 
-const complaintStore = new Map<string, Complaint>();
 let complaintCounter = 1000;
 
 function generateComplaintId(): string {
@@ -21,15 +21,46 @@ function getAssignedTeam(type: ComplaintType, urgency: UrgencyLevel): string {
   return team;
 }
 
-export function createComplaint(
+function toComplaint(row: {
+  complaintId: string;
+  patientName: string;
+  complaintType: string;
+  description: string;
+  urgency: string;
+  status: string;
+  assignedTeam: string;
+  createdAt: Date;
+  lastUpdated: Date;
+  escalated: boolean;
+  escalationReason: string | null;
+  acknowledgementSent: boolean;
+}): Complaint {
+  return {
+    complaint_id: row.complaintId,
+    patient_name: row.patientName,
+    complaint_type: row.complaintType as ComplaintType,
+    description: row.description,
+    urgency: row.urgency as UrgencyLevel,
+    status: row.status as Complaint["status"],
+    assigned_team: row.assignedTeam,
+    created_at: row.createdAt.toISOString(),
+    last_updated: row.lastUpdated.toISOString(),
+    escalated: row.escalated,
+    escalation_reason: row.escalationReason ?? undefined,
+    acknowledgement_sent: row.acknowledgementSent,
+  };
+}
+
+/** Build a complaint object in memory — does NOT write to the database. */
+export function buildComplaint(
   patient_name: string,
   complaint_type: ComplaintType,
   description: string,
   urgency: UrgencyLevel
-): { complaint_id: string; timestamp: string } {
+): Complaint {
   const complaint_id = generateComplaintId();
   const now = new Date().toISOString();
-  const complaint: Complaint = {
+  return {
     complaint_id,
     patient_name,
     complaint_type,
@@ -42,62 +73,108 @@ export function createComplaint(
     escalated: false,
     acknowledgement_sent: false,
   };
-  complaintStore.set(complaint_id, complaint);
-  return { complaint_id, timestamp: now };
 }
 
-export function getComplaint(complaint_id: string): Complaint | undefined {
-  return complaintStore.get(complaint_id);
+/** Persist a previously built complaint to the database. */
+export async function persistComplaint(
+  complaint: Complaint,
+  userId?: string | null
+): Promise<void> {
+  await prisma.complaint.create({
+    data: {
+      complaintId: complaint.complaint_id,
+      patientName: complaint.patient_name,
+      complaintType: complaint.complaint_type,
+      description: complaint.description,
+      urgency: complaint.urgency,
+      status: complaint.status,
+      assignedTeam: complaint.assigned_team,
+      escalated: complaint.escalated,
+      acknowledgementSent: complaint.acknowledgement_sent,
+      userId: userId ?? null,
+    },
+  });
 }
 
-export function escalateComplaint(
+/** @deprecated Use buildComplaint + persistComplaint instead. */
+export async function createComplaint(
+  patient_name: string,
+  complaint_type: ComplaintType,
+  description: string,
+  urgency: UrgencyLevel,
+  userId?: string | null
+): Promise<{ complaint_id: string; timestamp: string }> {
+  const complaint = buildComplaint(patient_name, complaint_type, description, urgency);
+  await persistComplaint(complaint, userId);
+  return { complaint_id: complaint.complaint_id, timestamp: complaint.created_at };
+}
+
+export async function getComplaint(complaint_id: string): Promise<Complaint | undefined> {
+  const row = await prisma.complaint.findUnique({ where: { complaintId: complaint_id } });
+  if (!row) return undefined;
+  return toComplaint(row);
+}
+
+export async function escalateComplaint(
   complaint_id: string,
   reason: string
-): { success: boolean; estimated_response_time: string; message: string } {
-  const complaint = complaintStore.get(complaint_id);
-  if (!complaint) {
-    return {
-      success: false,
-      estimated_response_time: "",
-      message: `Complaint ${complaint_id} not found.`,
-    };
+): Promise<{ success: boolean; estimated_response_time: string; message: string }> {
+  const existing = await prisma.complaint.findUnique({ where: { complaintId: complaint_id } });
+  if (!existing) {
+    return { success: false, estimated_response_time: "", message: `Complaint ${complaint_id} not found.` };
   }
-  complaint.escalated = true;
-  complaint.escalation_reason = reason;
-  complaint.status = "under_review";
-  complaint.last_updated = new Date().toISOString();
-  complaintStore.set(complaint_id, complaint);
+
+  await prisma.complaint.update({
+    where: { complaintId: complaint_id },
+    data: { escalated: true, escalationReason: reason, status: "under_review" },
+  });
+
   return {
     success: true,
     estimated_response_time: "within 2 hours",
-    message: `Complaint ${complaint_id} has been escalated to senior staff. A human representative will follow up ${complaint.urgency === "high" ? "within 30 minutes" : "within 2 hours"}.`,
+    message: `Complaint ${complaint_id} has been escalated. A representative will follow up ${existing.urgency === "high" ? "within 30 minutes" : "within 2 hours"}.`,
   };
 }
 
-export function markAcknowledgementSent(
+export async function markAcknowledgementSent(
   complaint_id: string,
   patient_email: string,
   patient_name: string
-): { success: boolean; message: string } {
-  const complaint = complaintStore.get(complaint_id);
-  if (!complaint) {
-    return {
-      success: false,
-      message: `Complaint ${complaint_id} not found.`,
-    };
+): Promise<{ success: boolean; message: string }> {
+  const existing = await prisma.complaint.findUnique({ where: { complaintId: complaint_id } });
+  if (!existing) {
+    return { success: false, message: `Complaint ${complaint_id} not found.` };
   }
-  complaint.acknowledgement_sent = true;
-  complaint.last_updated = new Date().toISOString();
-  complaintStore.set(complaint_id, complaint);
-  console.log(
-    `[MOCK EMAIL] Acknowledgement sent to ${patient_name} <${patient_email}> for complaint ${complaint_id}`
-  );
+
+  await prisma.complaint.update({
+    where: { complaintId: complaint_id },
+    data: { acknowledgementSent: true },
+  });
+
+  console.log(`[MOCK EMAIL] Acknowledgement sent to ${patient_name} <${patient_email}> for complaint ${complaint_id}`);
   return {
     success: true,
     message: `Acknowledgement email sent to ${patient_name} at ${patient_email} for complaint ${complaint_id}.`,
   };
 }
 
-export function getAllComplaints(): Complaint[] {
-  return Array.from(complaintStore.values());
+export async function getComplaintsByUser(userId: string): Promise<Complaint[]> {
+  const rows = await prisma.complaint.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(toComplaint);
+}
+
+export async function deleteComplaint(complaint_id: string, userId: string): Promise<boolean> {
+  const row = await prisma.complaint.findUnique({ where: { complaintId: complaint_id } });
+  // Only allow deletion by the owning user
+  if (!row || row.userId !== userId) return false;
+  await prisma.complaint.delete({ where: { complaintId: complaint_id } });
+  return true;
+}
+
+export async function getAllComplaints(): Promise<Complaint[]> {
+  const rows = await prisma.complaint.findMany({ orderBy: { createdAt: "desc" } });
+  return rows.map(toComplaint);
 }
