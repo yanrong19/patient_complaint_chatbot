@@ -16,17 +16,22 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    setLoading(false);
-    if (result?.error) {
-      setError("Invalid email or password.");
-    } else {
-      router.push("/");
-      router.refresh();
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+      if (result?.error) {
+        setError("Invalid email or password.");
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      setError("A network error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
