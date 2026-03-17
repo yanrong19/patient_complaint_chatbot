@@ -11,6 +11,7 @@ import {
 import { Message } from "../../types";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../lib/auth";
+import { redactPII } from "../../lib/guardrails/piiRedactor";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Vercel Hobby plan max; upgrade to Pro for 300s
@@ -172,9 +173,14 @@ export async function POST(req: NextRequest) {
           content: m.content,
         }));
 
+        const piiInstruction = `\n\nOUTPUT SAFETY RULES (mandatory — never violate):
+- NEVER include in your response: email addresses, phone numbers, home addresses, SSN, medical record numbers (MRN), credit/debit card numbers, dates of birth, or government ID numbers
+- If you need to refer to a patient's contact details, say "your registered contact details" instead
+- If you need to reference an ID, use only the complaint reference ID (e.g. COMP-XXXX)`;
+
         const systemPrompt = userName
-          ? `${closerContext}\n\nThe patient's registered name is "${userName}". Address them by their first name where natural.`
-          : closerContext;
+          ? `${closerContext}${piiInstruction}\n\nThe patient's registered name is "${userName}". Address them by their first name where natural.`
+          : `${closerContext}${piiInstruction}`;
 
         // ── Start suggestions generation in parallel with streaming ────────
         // By the time streaming finishes the suggestions call is usually done,
@@ -229,6 +235,7 @@ export async function POST(req: NextRequest) {
           const token = chunk.choices[0]?.delta?.content;
           if (token) {
             fullResponse += token;
+            // Stream raw token — PII redaction is applied to the final stored response
             send({ type: "token", content: token });
           }
         }
@@ -236,9 +243,12 @@ export async function POST(req: NextRequest) {
         // Await suggestions — parallel call started before streaming, usually ready by now
         const suggestions = await suggestionsPromise;
 
+        // ── Output guardrail: redact any PII/PHI that slipped through ──────
+        const safeResponse = redactPII(fullResponse);
+
         send({
           type: "done",
-          fullResponse,
+          fullResponse: safeResponse,
           ...(complaintForDone ? { complaint: complaintForDone, complaintId: finalState.complaintId } : {}),
           ...(suggestions.length > 0 ? { suggestions } : {}),
         });

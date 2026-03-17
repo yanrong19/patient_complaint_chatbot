@@ -1,5 +1,32 @@
 import { AgentState } from "../state";
 
+// ── Guardrail response templates ───────────────────────────────────────────────
+
+const OUT_OF_SCOPE_CONTEXT = `
+You are Kira, the Patient Complaints AI for a hospital.
+The patient has sent a message that is outside the scope of what this system can help with.
+
+INSTRUCTIONS:
+- Politely acknowledge their message
+- Clearly explain that you can only assist with hospital-related matters such as complaints, billing enquiries, appointment issues, and patient experience concerns
+- Do NOT attempt to answer their query or speculate on an answer
+- Suggest they contact the relevant service directly, or speak with a member of hospital staff who can better assist them
+- Keep the response warm, brief, and under 80 words
+`.trim();
+
+const MEDICAL_ADVICE_REFUSAL_CONTEXT = `
+You are Kira, the Patient Complaints AI for a hospital.
+The patient is asking for medical advice, diagnosis, or treatment guidance.
+
+INSTRUCTIONS:
+- REFUSE to provide any medical diagnosis, treatment recommendation, drug dosage, or clinical guidance of any kind
+- Do NOT speculate, suggest, or imply any medical answer even indirectly
+- Clearly explain that you are not a medical professional and are not able to give medical advice
+- Direct the patient to consult with their doctor, specialist, or the hospital's clinical team
+- If appropriate, offer to help them log a complaint or book an appointment instead
+- Keep the response empathetic, clear, and under 100 words
+`.trim();
+
 const URGENCY_LABELS: Record<string, string> = {
   critical: "⚠️ CRITICAL — immediate escalation required",
   urgent: "🔴 URGENT — same-day response required",
@@ -25,6 +52,14 @@ export async function closerAgentNode(
 ): Promise<Partial<AgentState>> {
   try {
   const analysis = state.orchestratorAnalysis;
+
+  // ── Guardrail overrides — checked before any other logic ──────────────────
+  if (analysis?.isMedicalAdviceRequest) {
+    return { closerContext: MEDICAL_ADVICE_REFUSAL_CONTEXT };
+  }
+  if (analysis?.isOutOfScope) {
+    return { closerContext: OUT_OF_SCOPE_CONTEXT };
+  }
   const sentiment = state.sentiment;
   const sbar = state.sbarSummary;
 

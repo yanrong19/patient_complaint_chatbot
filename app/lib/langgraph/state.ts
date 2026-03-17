@@ -36,6 +36,8 @@ export interface OrchestratorAnalysis {
   patientName: string | null;
   complaintType: string | null;
   isComplaint: boolean;
+  isOutOfScope: boolean;
+  isMedicalAdviceRequest: boolean;
 }
 
 export interface ToolCallRecord {

@@ -8,6 +8,7 @@ const ORCHESTRATOR_FALLBACK: OrchestratorAnalysis = {
   isComplaint: false, coreIssues: [], categories: [], priority: "low",
   assignedAgents: [], reasoning: "Orchestrator unavailable.",
   requiresImmediateEscalation: false, patientName: null, complaintType: null,
+  isOutOfScope: false, isMedicalAdviceRequest: false,
 };
 
 const SENTIMENT_FALLBACK: SentimentResult = {
@@ -111,6 +112,10 @@ Your job is to:
 
 isComplaint rules — set to true ONLY when the message describes a real grievance, problem, or issue with hospital services (e.g. billing errors, poor care, long waits, staff misconduct). Set to false for general questions, greetings, small talk, unrelated queries, or simple factual questions.
 
+isOutOfScope rules — set to true when the query has NO connection to hospital services, patient care, billing, appointments, or medical experiences. Examples: cooking questions, tech support, stock prices, unrelated personal matters. Set to false for any hospital-related query even if it is a general question.
+
+isMedicalAdviceRequest rules — set to true when the patient is asking for medical diagnosis, treatment recommendations, drug dosages, symptom interpretation, or any clinical guidance that should only come from a licensed clinician. Examples: "what medication should I take?", "do I have diabetes?", "should I get this surgery?". Set to false for complaints ABOUT medical care already received.
+
 Categories available: clinical, billing, experience, compliance, scheduling
 
 Priority rules:
@@ -127,6 +132,8 @@ Return JSON only, no markdown.
 Schema:
 {
   "isComplaint": true | false,
+  "isOutOfScope": true | false,
+  "isMedicalAdviceRequest": true | false,
   "coreIssues": ["issue 1", "issue 2"],
   "categories": ["clinical", "billing"],
   "priority": "high" | "medium" | "low",
