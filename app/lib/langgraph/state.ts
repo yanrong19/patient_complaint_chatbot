@@ -56,6 +56,14 @@ export interface AgentResult {
   urgency: UrgencyLevel;
   reasoning?: string;
   toolCalls?: ToolCallRecord[];
+  // compliance-specific
+  legalRiskLevel?: string;
+  hipaaRisk?: boolean;
+  escalateToRiskManagement?: boolean;
+  // experience-specific
+  teamsToNotify?: string[];
+  apologyDraft?: string;
+  immediateRectification?: string;
 }
 
 export interface SBARSummary {

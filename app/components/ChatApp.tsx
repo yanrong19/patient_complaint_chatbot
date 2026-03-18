@@ -605,18 +605,18 @@ export default function ChatApp() {
   };
 
   return (
-    <div ref={containerRef} className={`relative flex ${session?.user ? "pt-8" : ""} h-screen bg-slate-950 text-white overflow-hidden select-none`}>
+    <div ref={containerRef} className={`relative flex ${session?.user ? "pt-8" : ""} h-screen bg-slate-50 text-slate-800 overflow-hidden select-none`}>
       {session?.user && (
-        <div className="absolute top-0 left-0 right-0 z-10 h-8 bg-slate-950/80 border-b border-slate-800/60 flex items-center justify-end px-4 gap-3 backdrop-blur-sm">
-          <span className="text-[10px] text-slate-500">
+        <div className="absolute top-0 left-0 right-0 z-10 h-8 bg-sky-500 flex items-center justify-end px-4 gap-3">
+          <span className="text-[10px] text-sky-100">
             {session.user.name}
           </span>
-          <a href="/complaints" className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors font-medium">
+          <a href="/complaints" className="text-[10px] text-white hover:text-sky-100 transition-colors font-medium">
             My Complaints
           </a>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+            className="text-[10px] text-sky-100 hover:text-white transition-colors"
           >
             Sign out
           </button>
@@ -646,10 +646,10 @@ export default function ChatApp() {
       {/* Drag handle */}
       <div
         onMouseDown={() => { isDraggingRef.current = true; }}
-        className="w-1.5 flex-shrink-0 bg-slate-700/60 hover:bg-cyan-500/50 active:bg-cyan-400/70 cursor-col-resize transition-colors group relative z-10"
+        className="w-1.5 flex-shrink-0 bg-gray-200 hover:bg-blue-400/50 active:bg-blue-500/70 cursor-col-resize transition-colors group relative z-10"
       >
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
-          <div className="w-0.5 h-10 rounded-full bg-slate-600 group-hover:bg-cyan-400 transition-colors" />
+          <div className="w-0.5 h-10 rounded-full bg-gray-300 group-hover:bg-blue-500 transition-colors" />
         </div>
       </div>
 

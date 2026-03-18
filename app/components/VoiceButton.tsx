@@ -187,12 +187,12 @@ export default function VoiceButton({
       <button
         onClick={handleClick}
         disabled={disabled}
-        className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
+        className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
           disabled
-            ? "opacity-40 cursor-not-allowed bg-slate-700"
+            ? "opacity-40 cursor-not-allowed bg-gray-200"
             : isRecording
             ? "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50"
-            : "bg-cyan-600 hover:bg-cyan-500 shadow-md shadow-cyan-600/30"
+            : "bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/30"
         }`}
         title={isRecording ? "Stop recording" : `Voice input (${isZh ? "Chinese" : "English"})`}
       >
@@ -219,8 +219,8 @@ export default function VoiceButton({
         disabled={isRecording || disabled}
         className={`text-[10px] font-semibold px-1.5 py-0.5 rounded transition-all ${
           isZh
-            ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-            : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+            ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+            : "bg-gray-100 text-slate-500 hover:bg-gray-200"
         } disabled:opacity-40 disabled:cursor-not-allowed`}
         title={isZh ? "Switch to English" : "切换到中文"}
       >

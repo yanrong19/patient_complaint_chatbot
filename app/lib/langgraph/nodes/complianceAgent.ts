@@ -73,7 +73,7 @@ ${toolResultsText}`,
     ],
     response_format: { type: "json_object" },
     temperature: 0.1,
-    max_tokens: 300,
+    max_tokens: 600,
   });
 
   const raw = response.choices[0].message.content ?? "{}";
@@ -89,6 +89,9 @@ ${toolResultsText}`,
     recommendedActions: parsed.recommendedActions ?? [],
     urgency: parsed.urgency ?? "critical",
     reasoning: parsed.reasoning, toolCalls,
+    legalRiskLevel: parsed.legalRiskLevel,
+    hipaaRisk: parsed.hipaaRisk,
+    escalateToRiskManagement: parsed.escalateToRiskManagement,
   };
   return { agentResults: [result] };
   } catch {

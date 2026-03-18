@@ -21,74 +21,74 @@ interface AgentVisualConfig {
 
 const AGENT_CONFIG: Record<AgentNodeType, AgentVisualConfig> = {
   orchestrator: {
-    accentHex: "#f59e0b",
-    borderClass: "border-amber-500/50",
-    bgClass: "bg-amber-500/10",
-    labelClass: "text-amber-400",
+    accentHex: "#d97706",
+    borderClass: "border-amber-300",
+    bgClass: "bg-amber-50",
+    labelClass: "text-amber-700",
     badgeLabel: "MASTER",
-    badgeClass: "bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
+    badgeClass: "bg-amber-100 text-amber-700 border border-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
     isOrchestrator: true,
   },
   clinical: {
-    accentHex: "#06b6d4",
-    borderClass: "border-cyan-500/30",
-    bgClass: "bg-cyan-500/5",
-    labelClass: "text-cyan-400",
+    accentHex: "#0f766e",
+    borderClass: "border-teal-300",
+    bgClass: "bg-teal-50",
+    labelClass: "text-teal-700",
   },
   billing: {
-    accentHex: "#3b82f6",
-    borderClass: "border-blue-500/30",
-    bgClass: "bg-blue-500/5",
-    labelClass: "text-blue-400",
+    accentHex: "#1d4ed8",
+    borderClass: "border-blue-300",
+    bgClass: "bg-blue-50",
+    labelClass: "text-blue-700",
   },
   experience: {
-    accentHex: "#10b981",
-    borderClass: "border-emerald-500/30",
-    bgClass: "bg-emerald-500/5",
-    labelClass: "text-emerald-400",
+    accentHex: "#047857",
+    borderClass: "border-emerald-300",
+    bgClass: "bg-emerald-50",
+    labelClass: "text-emerald-700",
   },
   compliance: {
-    accentHex: "#ef4444",
-    borderClass: "border-red-500/50",
-    bgClass: "bg-red-500/5",
-    labelClass: "text-red-400",
+    accentHex: "#b91c1c",
+    borderClass: "border-red-300",
+    bgClass: "bg-red-50",
+    labelClass: "text-red-700",
     isCompliance: true,
   },
   scheduling: {
-    accentHex: "#f97316",
-    borderClass: "border-orange-500/30",
-    bgClass: "bg-orange-500/5",
-    labelClass: "text-orange-400",
+    accentHex: "#c2410c",
+    borderClass: "border-orange-300",
+    bgClass: "bg-orange-50",
+    labelClass: "text-orange-700",
   },
   summary: {
-    accentHex: "#14b8a6",
-    borderClass: "border-teal-500/30",
-    bgClass: "bg-teal-500/5",
-    labelClass: "text-teal-400",
+    accentHex: "#0e7490",
+    borderClass: "border-cyan-300",
+    bgClass: "bg-cyan-50",
+    labelClass: "text-cyan-700",
   },
   closer: {
-    accentHex: "#a855f7",
-    borderClass: "border-purple-500/30",
-    bgClass: "bg-purple-500/5",
-    labelClass: "text-purple-400",
+    accentHex: "#7e22ce",
+    borderClass: "border-purple-300",
+    bgClass: "bg-purple-50",
+    labelClass: "text-purple-700",
   },
 };
 
 // Fallback for generic step types (thinking, tool_call, etc.)
 const STEP_TYPE_CONFIG: Record<string, { accentHex: string; borderClass: string; bgClass: string }> = {
-  thinking:    { accentHex: "#3b82f6", borderClass: "border-blue-500/30",  bgClass: "bg-blue-500/5" },
-  tool_call:   { accentHex: "#06b6d4", borderClass: "border-cyan-500/30",  bgClass: "bg-cyan-500/5" },
-  tool_result: { accentHex: "#14b8a6", borderClass: "border-teal-500/30",  bgClass: "bg-teal-500/5" },
-  complete:    { accentHex: "#22c55e", borderClass: "border-green-500/30", bgClass: "bg-green-500/5" },
-  escalation:  { accentHex: "#f59e0b", borderClass: "border-amber-500/40", bgClass: "bg-amber-500/5" },
-  error:       { accentHex: "#ef4444", borderClass: "border-red-500/30",   bgClass: "bg-red-500/5" },
+  thinking:    { accentHex: "#3b82f6", borderClass: "border-blue-300",   bgClass: "bg-blue-50"   },
+  tool_call:   { accentHex: "#0e7490", borderClass: "border-cyan-300",   bgClass: "bg-cyan-50"   },
+  tool_result: { accentHex: "#0f766e", borderClass: "border-teal-300",   bgClass: "bg-teal-50"   },
+  complete:    { accentHex: "#15803d", borderClass: "border-green-300",  bgClass: "bg-green-50"  },
+  escalation:  { accentHex: "#d97706", borderClass: "border-amber-300",  bgClass: "bg-amber-50"  },
+  error:       { accentHex: "#b91c1c", borderClass: "border-red-300",    bgClass: "bg-red-50"    },
 };
 
 const STATUS_CONFIG: Record<WorkbenchStepStatus, { label: string; classes: string }> = {
-  pending: { label: "Pending", classes: "bg-slate-700 text-slate-300" },
-  running: { label: "Running", classes: "bg-blue-500/20 text-blue-300 animate-pulse" },
-  done:    { label: "Done",    classes: "bg-green-500/20 text-green-300" },
-  error:   { label: "Error",   classes: "bg-red-500/20 text-red-300" },
+  pending: { label: "Pending", classes: "bg-gray-100 text-gray-500" },
+  running: { label: "Running", classes: "bg-blue-100 text-blue-700 animate-pulse" },
+  done:    { label: "Done",    classes: "bg-green-100 text-green-700" },
+  error:   { label: "Error",   classes: "bg-red-100 text-red-700" },
 };
 
 // ── Insight pill derivation ──────────────────────────────────────────────────
@@ -106,14 +106,14 @@ function deriveInsightPills(step: WorkbenchStep): Pill[] {
     const cid = output.complaintId as string | undefined;
     const escalate = output.requiresImmediateEscalation as boolean | undefined;
     if (priority) {
-      const pc = priority === "high" ? "bg-red-500/20 text-red-300" : priority === "medium" ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300";
+      const pc = priority === "high" ? "bg-red-100 text-red-700" : priority === "medium" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700";
       pills.push({ label: `🎯 ${priority.toUpperCase()} priority`, colorClass: pc });
     }
     categories?.slice(0, 2).forEach(c =>
-      pills.push({ label: `📂 ${c}`, colorClass: "bg-amber-500/15 text-amber-400" })
+      pills.push({ label: `📂 ${c}`, colorClass: "bg-amber-100 text-amber-700" })
     );
-    if (cid) pills.push({ label: `🆔 ${cid}`, colorClass: "bg-slate-700 text-slate-300" });
-    if (escalate) pills.push({ label: "⚠️ Escalate", colorClass: "bg-red-500/30 text-red-200 font-bold" });
+    if (cid) pills.push({ label: `🆔 ${cid}`, colorClass: "bg-gray-100 text-gray-600" });
+    if (escalate) pills.push({ label: "⚠️ Escalate", colorClass: "bg-red-100 text-red-700 font-bold" });
     return pills;
   }
 
@@ -122,14 +122,14 @@ function deriveInsightPills(step: WorkbenchStep): Pill[] {
     const hipaa = output.hipaaRisk as boolean | undefined;
     const escalate = output.escalateToRiskManagement as boolean | undefined;
     if (legalRisk && legalRisk !== "none") {
-      const lc = legalRisk === "critical" || legalRisk === "high" ? "bg-red-500/30 text-red-200 font-semibold" : "bg-amber-500/20 text-amber-300";
+      const lc = legalRisk === "critical" || legalRisk === "high" ? "bg-red-100 text-red-700 font-semibold" : "bg-amber-100 text-amber-700";
       pills.push({ label: `⚖️ Legal: ${legalRisk}`, colorClass: lc });
     }
-    if (hipaa) pills.push({ label: "🔒 HIPAA Risk", colorClass: "bg-red-500/30 text-red-200 font-bold" });
-    if (escalate) pills.push({ label: "📞 Risk Mgmt", colorClass: "bg-red-500/20 text-red-300" });
+    if (hipaa) pills.push({ label: "🔒 HIPAA Risk", colorClass: "bg-red-100 text-red-700 font-bold" });
+    if (escalate) pills.push({ label: "📞 Risk Mgmt", colorClass: "bg-red-100 text-red-700" });
     if (!legalRisk && !hipaa && !escalate) {
       const urgency = output.urgency as string | undefined;
-      if (urgency) pills.push({ label: `🚨 ${urgency}`, colorClass: "bg-red-500/20 text-red-300" });
+      if (urgency) pills.push({ label: `🚨 ${urgency}`, colorClass: "bg-red-100 text-red-700" });
     }
     return pills;
   }
@@ -137,19 +137,19 @@ function deriveInsightPills(step: WorkbenchStep): Pill[] {
   // Generic worker agents (clinical, billing, experience, scheduling)
   const urgency = output.urgency as string | undefined;
   if (urgency) {
-    const uc = urgency === "critical" ? "bg-red-500/20 text-red-300" : urgency === "urgent" ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300";
+    const uc = urgency === "critical" ? "bg-red-100 text-red-700" : urgency === "urgent" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700";
     pills.push({ label: `🚨 ${urgency}`, colorClass: uc });
   }
   const actions = output.recommendedActions as string[] | undefined;
   if (actions?.[0]) {
-    pills.push({ label: `✅ ${actions[0].slice(0, 32)}${actions[0].length > 32 ? "…" : ""}`, colorClass: "bg-slate-700 text-slate-300" });
+    pills.push({ label: `✅ ${actions[0].slice(0, 32)}${actions[0].length > 32 ? "…" : ""}`, colorClass: "bg-gray-100 text-gray-600" });
   }
 
   if (agentType === "summary") {
-    return [{ label: "📋 SBAR Ready", colorClass: "bg-teal-500/20 text-teal-300" }];
+    return [{ label: "📋 SBAR Ready", colorClass: "bg-cyan-100 text-cyan-700" }];
   }
   if (agentType === "closer") {
-    return [{ label: "✉️ Response Prepared", colorClass: "bg-purple-500/20 text-purple-300" }];
+    return [{ label: "✉️ Response Prepared", colorClass: "bg-purple-100 text-purple-700" }];
   }
 
   return pills.slice(0, 3);
@@ -204,7 +204,7 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-white truncate">
+              <span className="text-sm font-medium text-slate-800 truncate">
                 {step.title}
               </span>
 
@@ -220,21 +220,21 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
 
               {/* Compliance warning when running */}
               {isComplianceRunning && (
-                <span className="text-xs text-red-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping inline-block" />
+                <span className="text-xs text-red-600 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping inline-block" />
                   Scanning
                 </span>
               )}
             </div>
 
             {step.description && (
-              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
                 {step.description}
               </p>
             )}
           </div>
 
-          <span className="text-xs text-slate-500 flex-shrink-0 mt-0.5">
+          <span className="text-xs text-slate-400 flex-shrink-0 mt-0.5">
             {formatTime(step.timestamp)}
           </span>
         </div>
@@ -258,7 +258,7 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
           <div className="mt-2">
             <button
               onClick={() => setReasoningOpen((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -278,12 +278,12 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
             </button>
             {reasoningOpen && (
               <div
-                className="mt-1.5 text-xs text-slate-300 bg-slate-950/60 rounded p-2.5 leading-relaxed border-l-2"
+                className="mt-1.5 text-xs text-slate-600 bg-gray-50 rounded p-2.5 leading-relaxed border-l-2"
                 style={{ borderColor: accentHex }}
               >
-                <span className="text-slate-500 italic">&ldquo;</span>
+                <span className="text-slate-400 italic">&ldquo;</span>
                 {reasoning}
-                <span className="text-slate-500 italic">&rdquo;</span>
+                <span className="text-slate-400 italic">&rdquo;</span>
               </div>
             )}
           </div>
@@ -294,7 +294,7 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
           <div className="mt-2">
             <button
               onClick={() => setDetailsOpen((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -316,7 +316,7 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
                 {step.input && Object.keys(step.input).length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">Input</p>
-                    <pre className="text-xs text-cyan-300 bg-slate-900/60 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words">
+                    <pre className="text-xs text-blue-700 bg-blue-50 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words">
                       {JSON.stringify(step.input, null, 2)}
                     </pre>
                   </div>
@@ -324,7 +324,7 @@ export default function WorkbenchCard({ step }: WorkbenchCardProps) {
                 {step.output && Object.keys(step.output).length > 0 && (
                   <div>
                     <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">Output</p>
-                    <pre className="text-xs text-teal-300 bg-slate-900/60 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words">
+                    <pre className="text-xs text-teal-700 bg-teal-50 rounded p-2 overflow-x-auto whitespace-pre-wrap break-words">
                       {JSON.stringify(step.output, null, 2)}
                     </pre>
                   </div>

@@ -15,21 +15,21 @@ const AGENT_META: Record<
   AgentNodeType,
   { label: string; icon: string; colorHex: string; bgClass: string; borderClass: string; textClass: string; description: string }
 > = {
-  orchestrator: { label: "Orchestrator",            icon: "🎯", colorHex: "#f59e0b", bgClass: "bg-amber-500/10",   borderClass: "border-amber-500/50",  textClass: "text-amber-300",   description: "Categorises issues, assigns priority, routes to specialist agents"   },
-  clinical:     { label: "Clinical Quality",        icon: "🏥", colorHex: "#06b6d4", bgClass: "bg-cyan-500/10",    borderClass: "border-cyan-500/30",   textClass: "text-cyan-300",    description: "Reviews medical treatment, care quality, and clinical concerns"      },
-  billing:      { label: "Billing & Financial",     icon: "💳", colorHex: "#3b82f6", bgClass: "bg-blue-500/10",    borderClass: "border-blue-500/30",   textClass: "text-blue-300",    description: "Analyses billing discrepancies, charges, and insurance issues"       },
-  experience:   { label: "Patient Experience",      icon: "🌟", colorHex: "#10b981", bgClass: "bg-emerald-500/10", borderClass: "border-emerald-500/30",textClass: "text-emerald-300", description: "Addresses hospitality, environment, and staff conduct concerns"      },
-  compliance:   { label: "Compliance & Legal Risk", icon: "⚖️", colorHex: "#ef4444", bgClass: "bg-red-500/10",     borderClass: "border-red-500/40",    textClass: "text-red-300",     description: "Scans for legal risk, HIPAA issues, and regulatory compliance"       },
-  scheduling:   { label: "Scheduling & Logistics",  icon: "📅", colorHex: "#f97316", bgClass: "bg-orange-500/10",  borderClass: "border-orange-500/30", textClass: "text-orange-300",  description: "Investigates wait times, appointment scheduling, and referral issues" },
-  summary:      { label: "Summary Agent",           icon: "📋", colorHex: "#14b8a6", bgClass: "bg-teal-500/10",    borderClass: "border-teal-500/30",   textClass: "text-teal-300",    description: "Condenses all findings into SBAR format for clinical staff"          },
-  closer:       { label: "Closer Agent",            icon: "✉️", colorHex: "#a855f7", bgClass: "bg-purple-500/10",  borderClass: "border-purple-500/30", textClass: "text-purple-300",  description: "Prepares a final empathetic response for the patient"                },
+  orchestrator: { label: "Orchestrator",            icon: "🎯", colorHex: "#d97706", bgClass: "bg-amber-50",   borderClass: "border-amber-300",  textClass: "text-amber-700",   description: "Categorises issues, assigns priority, routes to specialist agents"   },
+  clinical:     { label: "Clinical Quality",        icon: "🏥", colorHex: "#0f766e", bgClass: "bg-teal-50",    borderClass: "border-teal-300",   textClass: "text-teal-700",    description: "Reviews medical treatment, care quality, and clinical concerns"      },
+  billing:      { label: "Billing & Financial",     icon: "💳", colorHex: "#1d4ed8", bgClass: "bg-blue-50",    borderClass: "border-blue-300",   textClass: "text-blue-700",    description: "Analyses billing discrepancies, charges, and insurance issues"       },
+  experience:   { label: "Patient Experience",      icon: "🌟", colorHex: "#047857", bgClass: "bg-emerald-50", borderClass: "border-emerald-300",textClass: "text-emerald-700", description: "Addresses hospitality, environment, and staff conduct concerns"      },
+  compliance:   { label: "Compliance & Legal Risk", icon: "⚖️", colorHex: "#b91c1c", bgClass: "bg-red-50",     borderClass: "border-red-300",    textClass: "text-red-700",     description: "Scans for legal risk, HIPAA issues, and regulatory compliance"       },
+  scheduling:   { label: "Scheduling & Logistics",  icon: "📅", colorHex: "#c2410c", bgClass: "bg-orange-50",  borderClass: "border-orange-300", textClass: "text-orange-700",  description: "Investigates wait times, appointment scheduling, and referral issues" },
+  summary:      { label: "Summary Agent",           icon: "📋", colorHex: "#0e7490", bgClass: "bg-cyan-50",    borderClass: "border-cyan-300",   textClass: "text-cyan-700",    description: "Condenses all findings into SBAR format for clinical staff"          },
+  closer:       { label: "Closer Agent",            icon: "✉️", colorHex: "#7e22ce", bgClass: "bg-purple-50",  borderClass: "border-purple-300", textClass: "text-purple-700",  description: "Prepares a final empathetic response for the patient"                },
 };
 
 const STATUS_DOT: Record<WorkbenchStepStatus, string> = {
-  pending: "bg-slate-600",
-  running: "bg-blue-400 animate-pulse",
-  done:    "bg-green-400",
-  error:   "bg-red-400",
+  pending: "bg-gray-300",
+  running: "bg-blue-500 animate-pulse",
+  done:    "bg-green-500",
+  error:   "bg-red-500",
 };
 
 const STATUS_LABEL: Record<WorkbenchStepStatus, string> = {
@@ -40,10 +40,10 @@ const STATUS_LABEL: Record<WorkbenchStepStatus, string> = {
 };
 
 const STATUS_BADGE: Record<WorkbenchStepStatus, string> = {
-  pending: "bg-slate-700 text-slate-400",
-  running: "bg-blue-500/20 text-blue-300 animate-pulse",
-  done:    "bg-green-500/20 text-green-300",
-  error:   "bg-red-500/20 text-red-300",
+  pending: "bg-gray-100 text-gray-500",
+  running: "bg-blue-100 text-blue-700 animate-pulse",
+  done:    "bg-green-100 text-green-700",
+  error:   "bg-red-100 text-red-700",
 };
 
 const SPECIALIST_ORDER: AgentNodeType[] = [
@@ -85,8 +85,8 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
     const str = Array.isArray(value) ? (value as string[]).join(", ") : String(value);
     return (
       <div key={label} className="flex gap-2 text-xs">
-        <span className="text-slate-500 w-32 flex-shrink-0">{label}</span>
-        <span className={highlight ?? "text-slate-200"}>{str}</span>
+        <span className="text-slate-400 w-32 flex-shrink-0">{label}</span>
+        <span className={highlight ?? "text-slate-700"}>{str}</span>
       </div>
     );
   };
@@ -94,19 +94,29 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
   switch (agentType) {
     case "orchestrator":
       return [
-        row("Priority", (output.priority as string | undefined)?.toUpperCase(), output.priority === "high" ? "text-red-300 font-semibold" : output.priority === "medium" ? "text-amber-300 font-medium" : "text-green-300"),
+        row("Priority", (output.priority as string | undefined)?.toUpperCase(), output.priority === "high" ? "text-red-700 font-semibold" : output.priority === "medium" ? "text-amber-700 font-medium" : "text-green-700"),
         row("Categories", output.categories),
-        row("Complaint ID", output.complaintId, "text-amber-300 font-mono"),
+        row("Complaint ID", output.complaintId, "text-amber-700 font-mono"),
         row("Assigned Agents", output.assignedAgents),
-        row("Immediate Escalation", output.requiresImmediateEscalation ? "YES ⚠️" : undefined, "text-red-300 font-bold"),
+        row("Immediate Escalation", output.requiresImmediateEscalation ? "YES ⚠️" : undefined, "text-red-700 font-bold"),
       ].filter(Boolean);
     case "compliance":
       return [
-        row("Legal Risk", output.legalRiskLevel, (output.legalRiskLevel === "critical" || output.legalRiskLevel === "high") ? "text-red-300 font-semibold" : "text-amber-300"),
-        row("HIPAA Risk", output.hipaaRisk ? "YES ⚠️" : undefined, "text-red-300 font-bold"),
-        row("Escalate to Risk Mgmt", output.escalateToRiskManagement ? "YES" : undefined, "text-red-300"),
+        row("Legal Risk", output.legalRiskLevel, (output.legalRiskLevel === "critical" || output.legalRiskLevel === "high") ? "text-red-700 font-semibold" : "text-amber-700"),
+        row("HIPAA Risk", output.hipaaRisk ? "YES ⚠️" : undefined, "text-red-700 font-bold"),
+        row("Escalate to Risk Mgmt", output.escalateToRiskManagement ? "YES" : undefined, "text-red-700"),
         row("Urgency", output.urgency),
         row("Findings", output.findings),
+      ].filter(Boolean);
+    case "experience":
+      return [
+        row("Urgency", output.urgency, output.urgency === "critical" ? "text-red-700 font-semibold" : output.urgency === "urgent" ? "text-amber-700" : "text-green-700"),
+        row("Findings", output.findings),
+        row("Analysis", output.analysis),
+        row("Teams to Notify", output.teamsToNotify),
+        row("Immediate Rectification", output.immediateRectification),
+        row("Apology Draft", output.apologyDraft),
+        row("Recommended Actions", output.recommendedActions),
       ].filter(Boolean);
     case "summary":
       return [
@@ -126,19 +136,19 @@ function renderOutputFields(agentType: AgentNodeType, output: Record<string, unk
       const isComplaint = output.isComplaint as boolean | undefined;
       const complaintId = output.complaintId as string | null | undefined;
       return [
-        row("Patient Emotion", emotion && intensity ? `${emotion} (${intensity})` : emotion, "text-purple-300 font-medium"),
+        row("Patient Emotion", emotion && intensity ? `${emotion} (${intensity})` : emotion, "text-purple-700 font-medium"),
         row("Emotional Summary", summary),
-        row("Priority", priority, priority === "HIGH" ? "text-red-300 font-semibold" : priority === "MEDIUM" ? "text-amber-300" : "text-green-300"),
-        row("Type", isComplaint ? "Complaint" : "General enquiry", isComplaint ? "text-amber-300" : "text-slate-300"),
+        row("Priority", priority, priority === "HIGH" ? "text-red-700 font-semibold" : priority === "MEDIUM" ? "text-amber-700" : "text-green-700"),
+        row("Type", isComplaint ? "Complaint" : "General enquiry", isComplaint ? "text-amber-700" : "text-slate-600"),
         row("Core Issues", issues?.join("; ")),
         row("Specialist Input", specialists?.join(", ")),
-        row("Complaint ID", complaintId, "text-amber-300 font-mono"),
-        row("Immediate Escalation", escalation ? "YES ⚠️" : undefined, "text-red-300 font-bold"),
+        row("Complaint ID", complaintId, "text-amber-700 font-mono"),
+        row("Immediate Escalation", escalation ? "YES ⚠️" : undefined, "text-red-700 font-bold"),
       ].filter(Boolean);
     }
     default:
       return [
-        row("Urgency", output.urgency, output.urgency === "critical" ? "text-red-300 font-semibold" : output.urgency === "urgent" ? "text-amber-300" : "text-green-300"),
+        row("Urgency", output.urgency, output.urgency === "critical" ? "text-red-700 font-semibold" : output.urgency === "urgent" ? "text-amber-700" : "text-green-700"),
         row("Analysis", output.analysis),
         row("Findings", output.findings),
         row("Recommended Actions", output.recommendedActions),
@@ -190,7 +200,7 @@ function AgentDetailPanel({
           </span>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-300 transition-colors p-0.5"
+            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -200,7 +210,7 @@ function AgentDetailPanel({
         </div>
       </div>
 
-      <div className="px-4 py-3 space-y-3 bg-slate-900/40">
+      <div className="px-4 py-3 space-y-3 bg-gray-50">
         {/* Not yet invoked */}
         {!step && (
           <p className="text-xs text-slate-500 italic">
@@ -223,7 +233,7 @@ function AgentDetailPanel({
               🧠 Chain of Thought
             </p>
             <div
-              className="text-xs text-slate-300 bg-slate-950/50 rounded-lg p-3 leading-relaxed border-l-2 italic"
+              className="text-xs text-slate-600 bg-gray-100 rounded-lg p-3 leading-relaxed border-l-2 italic"
               style={{ borderColor: meta.colorHex }}
             >
               &ldquo;{reasoning}&rdquo;
@@ -237,7 +247,7 @@ function AgentDetailPanel({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
               📊 Output
             </p>
-            <div className="space-y-1.5 bg-slate-950/30 rounded-lg p-2.5">
+            <div className="space-y-1.5 bg-gray-100 rounded-lg p-2.5">
               {renderOutputFields(agentType, step!.output!)}
             </div>
           </div>
@@ -256,7 +266,7 @@ function AgentDetailPanel({
                 {toolCalls.map((tc) => (
                   <div
                     key={tc.tool}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-slate-700/40"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -270,7 +280,7 @@ function AgentDetailPanel({
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span className="text-[10px] font-medium text-slate-200">{tc.label}</span>
+                    <span className="text-[10px] font-medium text-slate-700">{tc.label}</span>
                   </div>
                 ))}
               </div>
@@ -283,7 +293,7 @@ function AgentDetailPanel({
           <div>
             <button
               onClick={() => setRawOpen((v) => !v)}
-              className="flex items-center gap-1.5 text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+              className="flex items-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
                 className={`w-3 h-3 transition-transform duration-200 ${rawOpen ? "rotate-180" : ""}`}>
@@ -292,7 +302,7 @@ function AgentDetailPanel({
               {"{ } Raw JSON"}
             </button>
             {rawOpen && (
-              <pre className="mt-1.5 text-[9px] text-slate-400 bg-slate-950/50 rounded-lg p-2.5 overflow-x-auto whitespace-pre-wrap break-words border border-slate-700/20">
+              <pre className="mt-1.5 text-[9px] text-slate-500 bg-gray-100 rounded-lg p-2.5 overflow-x-auto whitespace-pre-wrap break-words border border-gray-200">
                 {JSON.stringify(step!.output, null, 2)}
               </pre>
             )}
@@ -329,8 +339,8 @@ function AgentNodeCard({
         "border rounded-xl text-left transition-all duration-200 cursor-pointer group",
         compact ? "px-2.5 py-2 min-w-[90px]" : "px-3 py-2.5 min-w-[112px]",
         isActive
-          ? `${meta.bgClass} ${meta.borderClass} hover:brightness-125`
-          : "bg-slate-800/30 border-slate-700/30 opacity-40 cursor-default",
+          ? `${meta.bgClass} ${meta.borderClass} hover:brightness-95`
+          : "bg-gray-100 border-gray-200 opacity-40 cursor-default",
         selected && isActive ? "brightness-125" : "",
         status === "running" ? "ring-1 ring-blue-400/30" : "",
       ].join(" ")}
@@ -345,7 +355,7 @@ function AgentNodeCard({
           className={[
             "rounded-full flex-shrink-0",
             compact ? "w-1.5 h-1.5" : "w-2 h-2",
-            isActive ? STATUS_DOT[status] : "bg-slate-600 opacity-50",
+            isActive ? STATUS_DOT[status] : "bg-gray-300 opacity-50",
           ].join(" ")}
         />
       </div>
@@ -353,7 +363,7 @@ function AgentNodeCard({
         className={[
           "font-semibold leading-tight",
           compact ? "text-[9px]" : "text-[11px]",
-          isActive ? meta.textClass : "text-slate-600",
+          isActive ? meta.textClass : "text-gray-400",
         ].join(" ")}
       >
         {meta.label}
@@ -377,8 +387,8 @@ function Arrow() {
   return (
     <div className="flex-shrink-0 flex items-center px-1.5">
       <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
-        <line x1="0" y1="7" x2="15" y2="7" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M12 4 L18 7 L12 10" stroke="#475569" strokeWidth="1.5" fill="none"
+        <line x1="0" y1="7" x2="15" y2="7" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M12 4 L18 7 L12 10" stroke="#94a3b8" strokeWidth="1.5" fill="none"
           strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
@@ -400,14 +410,14 @@ function ParallelZone({
   onSelectAgent: (t: AgentNodeType) => void;
 }) {
   return (
-    <div className="border border-slate-600/40 rounded-xl bg-slate-800/20 px-3 py-2.5 mx-1">
-      <p className="text-[8px] text-slate-500 uppercase tracking-widest mb-2 font-bold text-center">
+    <div className="border border-gray-200 rounded-xl bg-gray-50 px-3 py-2.5 mx-1">
+      <p className="text-[8px] text-slate-400 uppercase tracking-widest mb-2 font-bold text-center">
         ⚡ Parallel
       </p>
       {pendingRouting ? (
         <div className="flex items-center gap-1.5 py-1 px-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60 animate-pulse flex-shrink-0" />
-          <span className="text-[9px] text-slate-500 whitespace-nowrap">Routing…</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+          <span className="text-[9px] text-slate-400 whitespace-nowrap">Routing…</span>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
@@ -462,8 +472,8 @@ export default function WorkbenchGraph({
       className={[
         "rounded-xl border p-4 transition-all duration-300",
         isActive
-          ? "border-slate-600/60 bg-slate-900/70 shadow-lg shadow-slate-900/30"
-          : "border-slate-700/30 bg-slate-900/40",
+          ? "border-blue-200 bg-white shadow-md shadow-blue-100/50"
+          : "border-gray-200 bg-white",
       ].join(" ")}
     >
       {/* Turn header */}
@@ -477,7 +487,7 @@ export default function WorkbenchGraph({
               ? "bg-red-500/15 text-red-400"
               : isActive
               ? "bg-blue-500/15 text-blue-400 animate-pulse"
-              : "bg-slate-700 text-slate-400",
+              : "bg-gray-100 text-gray-500",
           ].join(" ")}
         >
           {isDone ? "✓ Done" : hasError ? "Error" : isActive ? "● Live" : `Turn ${turnNumber}`}

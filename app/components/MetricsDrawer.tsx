@@ -16,12 +16,12 @@ function fmt(ms: number | null): string {
 }
 
 const EMOTION_CONFIG: Record<string, { color: string; bg: string; emoji: string }> = {
-  anger:       { color: "text-red-400",    bg: "bg-red-500/15",    emoji: "😠" },
-  distress:    { color: "text-red-400",    bg: "bg-red-500/15",    emoji: "😰" },
-  frustration: { color: "text-orange-400", bg: "bg-orange-500/15", emoji: "😤" },
-  sadness:     { color: "text-amber-400",  bg: "bg-amber-500/15",  emoji: "😢" },
-  confusion:   { color: "text-yellow-400", bg: "bg-yellow-500/15", emoji: "😕" },
-  neutral:     { color: "text-green-400",  bg: "bg-green-500/15",  emoji: "😐" },
+  anger:       { color: "text-red-700",    bg: "bg-red-50",    emoji: "😠" },
+  distress:    { color: "text-red-700",    bg: "bg-red-50",    emoji: "😰" },
+  frustration: { color: "text-orange-700", bg: "bg-orange-50", emoji: "😤" },
+  sadness:     { color: "text-amber-700",  bg: "bg-amber-50",  emoji: "😢" },
+  confusion:   { color: "text-yellow-700", bg: "bg-yellow-50", emoji: "😕" },
+  neutral:     { color: "text-green-700",  bg: "bg-green-50",  emoji: "😐" },
 };
 
 // Numeric score for sentiment delta (higher = more positive)
@@ -39,9 +39,9 @@ function SentimentDelta({ history }: { history: SentimentSnapshot[] }) {
   const first = sentimentScore(history[0]);
   const last  = sentimentScore(history[history.length - 1]);
   const diff  = last - first;
-  if (diff > 0.4)  return <span className="text-green-400 font-semibold text-xs">↑ Improving</span>;
-  if (diff < -0.4) return <span className="text-red-400   font-semibold text-xs">↓ Declining</span>;
-  return               <span className="text-slate-400    font-semibold text-xs">→ Stable</span>;
+  if (diff > 0.4)  return <span className="text-green-700 font-semibold text-xs">↑ Improving</span>;
+  if (diff < -0.4) return <span className="text-red-700   font-semibold text-xs">↓ Declining</span>;
+  return               <span className="text-slate-500    font-semibold text-xs">→ Stable</span>;
 }
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ function Cell({ label, value, accent = false }: { label: string; value: string; 
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[9px] text-slate-500 uppercase tracking-wide font-medium whitespace-nowrap">{label}</span>
-      <span className={`text-sm font-semibold tabular-nums ${accent ? "text-cyan-400" : "text-white"}`}>
+      <span className={`text-sm font-semibold tabular-nums ${accent ? "text-blue-600" : "text-slate-800"}`}>
         {value}
       </span>
     </div>
@@ -86,22 +86,22 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
     : "—";
 
   return (
-    <div className="border-t border-slate-700/60 bg-slate-900/80">
+    <div className="border-t border-gray-200 bg-white">
       {/* Toggle bar */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2 hover:bg-slate-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-            className="w-4 h-4 text-cyan-400">
+            className="w-4 h-4 text-blue-600">
             <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 3 0v-13A1.5 1.5 0 0 0 15.5 2ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 9.5 6ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10Z" />
           </svg>
-          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
             Performance Metrics
           </span>
           {turnCount > 0 && (
-            <span className="text-xs bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded-full">
+            <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
               {turnCount} turn{turnCount !== 1 ? "s" : ""}
             </span>
           )}
@@ -109,12 +109,12 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
           {!open && turnCount > 0 && (
             <div className="flex items-center gap-1 ml-1">
               {e2eLatencyMs !== null && (
-                <span className="text-[9px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">
+                <span className="text-[9px] bg-gray-100 text-slate-500 px-1.5 py-0.5 rounded">
                   E2E {fmt(e2eLatencyMs)}
                 </span>
               )}
               {escalationCount > 0 && (
-                <span className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
+                <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
                   {escalationCount} escalation{escalationCount !== 1 ? "s" : ""}
                 </span>
               )}
@@ -125,7 +125,7 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
           )}
         </div>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+          className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${open ? "rotate-180" : ""}`}>
           <path fillRule="evenodd" d="M9.47 6.47a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 1 1-1.06 1.06L10 8.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06l4.25-4.25Z" clipRule="evenodd" />
         </svg>
       </button>
@@ -134,20 +134,20 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
         <div className="px-4 pb-4 pt-1 space-y-4">
 
           {/* ── Tier 1: Technical ── */}
-          <Section tier="T1" label="Technical" color="bg-cyan-500/15 text-cyan-400">
+          <Section tier="T1" label="Technical" color="bg-blue-100 text-blue-700">
             <div className="grid grid-cols-4 gap-x-4 gap-y-2">
               <Cell label="TTFT"     value={fmt(ttfTokenMs)}  accent />
               <Cell label="E2E"      value={fmt(e2eLatencyMs)} accent />
               <Cell label="STT"      value={fmt(sttLatencyMs)} />
               <Cell label="TTS"      value={fmt(ttsLatencyMs)} />
             </div>
-            <p className="text-[9px] text-slate-600 mt-1">
+            <p className="text-[9px] text-slate-400 mt-1">
               TTFT = Time to First Token · E2E = full round-trip · STT/TTS = voice pipeline
             </p>
           </Section>
 
           {/* ── Tier 2: Conversational ── */}
-          <Section tier="T2" label="Conversational" color="bg-teal-500/15 text-teal-400">
+          <Section tier="T2" label="Conversational" color="bg-teal-100 text-teal-700">
             <div className="grid grid-cols-4 gap-x-4 gap-y-2">
               <Cell label="Turns"        value={turnCount > 0 ? String(turnCount) : "—"} />
               <Cell label="Success"      value={turnCount > 0 ? `${taskSuccessRate}%` : "—"} accent />
@@ -157,9 +157,9 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
           </Section>
 
           {/* ── Tier 3: Healthcare Outcomes ── */}
-          <Section tier="T3" label="Healthcare Outcomes" color="bg-violet-500/15 text-violet-400">
+          <Section tier="T3" label="Healthcare Outcomes" color="bg-purple-100 text-purple-700">
             {sentimentHistory.length === 0 ? (
-              <p className="text-xs text-slate-600 italic">No sentiment data yet</p>
+              <p className="text-xs text-slate-400 italic">No sentiment data yet</p>
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between mb-1">
@@ -173,15 +173,15 @@ export default function MetricsDrawer({ metrics }: MetricsDrawerProps) {
                     const cfg = EMOTION_CONFIG[snap.emotion] ?? EMOTION_CONFIG.neutral;
                     return (
                       <div key={i}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg ${cfg.bg} border border-white/5`}>
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg ${cfg.bg} border border-gray-200`}>
                         <span className="text-sm leading-none">{cfg.emoji}</span>
                         <div>
                           <p className={`text-[9px] font-semibold ${cfg.color} capitalize`}>
                             {snap.emotion}
                           </p>
-                          <p className="text-[8px] text-slate-500 capitalize">{snap.intensity}</p>
+                          <p className="text-[8px] text-slate-400 capitalize">{snap.intensity}</p>
                         </div>
-                        <span className="text-[8px] text-slate-600 ml-0.5">T{i + 1}</span>
+                        <span className="text-[8px] text-slate-400 ml-0.5">T{i + 1}</span>
                       </div>
                     );
                   })}

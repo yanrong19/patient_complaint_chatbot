@@ -319,8 +319,6 @@ function buildResultPayload(
 
     case "clinical_agent":
     case "billing_agent":
-    case "experience_agent":
-    case "compliance_agent":
     case "scheduling_agent": {
       const results = output.agentResults ?? [];
       const result = results[results.length - 1] as AgentResult | undefined;
@@ -332,6 +330,40 @@ function buildResultPayload(
         analysis: result.analysis,
         reasoning: result.reasoning,
         toolCalls: result.toolCalls ?? [],
+      };
+    }
+
+    case "experience_agent": {
+      const results = output.agentResults ?? [];
+      const result = results[results.length - 1] as AgentResult | undefined;
+      if (!result) return null;
+      return {
+        findings: result.findings,
+        recommendedActions: result.recommendedActions,
+        urgency: result.urgency,
+        analysis: result.analysis,
+        reasoning: result.reasoning,
+        toolCalls: result.toolCalls ?? [],
+        teamsToNotify: result.teamsToNotify,
+        apologyDraft: result.apologyDraft,
+        immediateRectification: result.immediateRectification,
+      };
+    }
+
+    case "compliance_agent": {
+      const results = output.agentResults ?? [];
+      const result = results[results.length - 1] as AgentResult | undefined;
+      if (!result) return null;
+      return {
+        findings: result.findings,
+        recommendedActions: result.recommendedActions,
+        urgency: result.urgency,
+        analysis: result.analysis,
+        reasoning: result.reasoning,
+        toolCalls: result.toolCalls ?? [],
+        legalRiskLevel: result.legalRiskLevel,
+        hipaaRisk: result.hipaaRisk,
+        escalateToRiskManagement: result.escalateToRiskManagement,
       };
     }
 

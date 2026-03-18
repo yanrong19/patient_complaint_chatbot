@@ -56,13 +56,14 @@ ${toolResultsText}`,
     ],
     response_format: { type: "json_object" },
     temperature: 0.3,
-    max_tokens: 300,
+    max_tokens: 600,
   });
 
   const raw = response.choices[0].message.content ?? "{}";
   const parsed = safeParseJSON<{
     analysis: string; findings: string;
     recommendedActions: string[]; urgency: "routine" | "urgent" | "critical"; reasoning?: string;
+    teamsToNotify?: string[]; apologyDraft?: string; immediateRectification?: string;
   }>(raw, { analysis: "", findings: "", recommendedActions: [], urgency: "routine" });
 
   const result: AgentResult = {
@@ -71,6 +72,9 @@ ${toolResultsText}`,
     recommendedActions: parsed.recommendedActions ?? [],
     urgency: parsed.urgency ?? "routine",
     reasoning: parsed.reasoning, toolCalls,
+    teamsToNotify: parsed.teamsToNotify,
+    apologyDraft: parsed.apologyDraft,
+    immediateRectification: parsed.immediateRectification,
   };
   return { agentResults: [result] };
   } catch {
