@@ -583,6 +583,15 @@ export default function ChatApp() {
 
   const handleRecordingStart = () => {
     voiceStartRef.current = Date.now();
+    // Barge-in: stop TTS immediately when patient starts speaking
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    ttsQueueRef.current = [];
+    ttsPlayingRef.current = false;
+    setIsTTSPlaying(false);
   };
 
   const handleRecordingStop = (latencyMs: number) => {
